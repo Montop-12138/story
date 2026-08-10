@@ -737,19 +737,6 @@
             flex: 1;
         }
 
-        /* 压缩提示消息 */
-        .message.compact-hint {
-            align-self: center;
-            background: rgba(79, 172, 254, 0.08);
-            color: rgba(0, 0, 0, 0.4);
-            font-size: 11px;
-            padding: 4px 14px;
-            border-radius: 20px;
-            border: 1px dashed rgba(79, 172, 254, 0.2);
-            max-width: 90%;
-            text-align: center;
-        }
-
         .message {
             max-width: 85%;
             padding: 8px 14px;
@@ -1169,11 +1156,8 @@
         //  压缩配置
         // ============================================================
         const COMPRESS_CONFIG = {
-            // 触发压缩的消息数量阈值（包含 user + assistant）
             TRIGGER_COUNT: 12,
-            // 压缩后保留的最近消息数量
             KEEP_RECENT: 6,
-            // 摘要最大字数（引导 AI 控制长度）
             SUMMARY_MAX_WORDS: 200
         };
 
@@ -1383,8 +1367,19 @@
                 setSyncStatus('syncing');
                 const collection = cloudDb.collection(COLLECTION_NAME);
                 const existing = await collection.limit(100).get();
-                for (const item of existing.data) {
-                    try { await collection.doc(item._id).remove(); } catch (e) {}
+                // 安全处理 existing.data
+                var existingData = [];
+                if (existing && existing.data && Array.isArray(existing.data)) {
+                    existingData = existing.data;
+                }
+                for (const item of existingData) {
+                    try {
+                        if (item._id) {
+                            await collection.doc(item._id).remove();
+                        }
+                    } catch (e) {
+                        console.warn('删除旧数据失败:', e);
+                    }
                 }
                 for (const session of sessionsData) {
                     await collection.add({
@@ -1436,7 +1431,6 @@
                 try { sessions = JSON.parse(data); } catch (e) { sessions = []; }
             } else { sessions = []; }
 
-            // 兼容旧数据：为没有 systemPrompt 和 summary 的对话补默认值
             for (var i = 0; i < sessions.length; i++) {
                 if (!sessions[i].systemPrompt) {
                     sessions[i].systemPrompt = DEFAULT_SYSTEM_PROMPT;
@@ -1463,19 +1457,8 @@
             }
         }
 
-        async function afterDataChange() {
-            saveSessionsToLocal();
-            if (isCloudReady) {
-                await syncToCloud(sessions);
-            }
-            renderAll();
-            setTimeout(function() {
-                chatScrollArea.scrollTop = chatScrollArea.scrollHeight;
-            }, 50);
-        }
-
         // ============================================================
-        //  渲染
+        //  渲染（优化：分离摘要更新和聊天框重绘）
         // ============================================================
         function renderSessionTabs() {
             sessionBar.innerHTML = '';
@@ -1486,7 +1469,6 @@
                 var nameSpan = document.createElement('span');
                 nameSpan.textContent = s.name || '新对话';
                 btn.appendChild(nameSpan);
-                // 如果该对话有摘要，显示小圆点
                 if (s.summary && s.summary.length > 0) {
                     var dot = document.createElement('span');
                     dot.className = 'summary-dot';
@@ -1528,7 +1510,6 @@
                 return;
             }
 
-            // 显示当前设定提示
             if (session.messages.length === 0) {
                 var infoDiv = document.createElement('div');
                 infoDiv.className = 'message assistant';
@@ -1538,9 +1519,6 @@
                 infoDiv.innerHTML = '📜 当前设定：' + promptPreview + (session.systemPrompt && session.systemPrompt.length > 60 ?
                     '…' : '');
                 chatBox.appendChild(infoDiv);
-            }
-
-            if (session.messages.length === 0) {
                 setTimeout(function() {
                     chatScrollArea.scrollTop = chatScrollArea.scrollHeight;
                 }, 50);
@@ -1654,7 +1632,8 @@
             }, 50);
         }
 
-        function renderSummary() {
+        // 只更新摘要显示区（不重绘聊天框）
+        function renderSummaryOnly() {
             var session = getCurrentSession();
             if (session && session.summary && session.summary.length > 0) {
                 summaryDisplay.classList.add('has-summary');
@@ -1669,7 +1648,7 @@
             var session = getCurrentSession();
             if (session) {
                 systemPromptInput.value = session.systemPrompt || '';
-                renderSummary();
+                renderSummaryOnly();
             }
             renderSessionTabs();
             renderChat();
@@ -1706,7 +1685,6 @@
                 statusTip.innerHTML =
                     '<span class="sync-status"><span class="sync-dot error" id="syncDot"></span><span id="syncText">未登录</span></span> ⏳ 请先输入 API Key';
             }
-            // 重新绑定 tokenInfo 引用
             var newTokenInfo = document.getElementById('tokenInfo');
             if (newTokenInfo) {
                 window.tokenInfoRef = newTokenInfo;
@@ -1740,7 +1718,11 @@
                 currentSessionId = sessions[0].id;
                 localStorage.setItem('deepseek_current_session_v9', currentSessionId);
             }
-            await afterDataChange();
+            saveSessionsToLocal();
+            renderAll();
+            if (isCloudReady) {
+                await syncToCloud(sessions);
+            }
             showToast('已删除');
         }
 
@@ -1749,7 +1731,11 @@
             var s = createSession('新对话', DEFAULT_SYSTEM_PROMPT);
             sessions.push(s);
             currentSessionId = s.id;
-            await afterDataChange();
+            saveSessionsToLocal();
+            renderAll();
+            if (isCloudReady) {
+                await syncToCloud(sessions);
+            }
             systemPromptInput.value = s.systemPrompt || '';
             renameInput.value = s.name || '';
             if (API_KEY) userInput.focus();
@@ -1763,7 +1749,11 @@
             if (!trimmed) { showToast('请输入有效名称'); return; }
             session.name = trimmed;
             session.updateTime = new Date().toISOString();
-            await afterDataChange();
+            saveSessionsToLocal();
+            renderAll();
+            if (isCloudReady) {
+                await syncToCloud(sessions);
+            }
             showToast('✅ 已重命名为: ' + trimmed);
         }
 
@@ -1777,21 +1767,24 @@
             if (!prompt) { showToast('请输入设定内容'); return; }
             session.systemPrompt = prompt;
             session.updateTime = new Date().toISOString();
-            await afterDataChange();
+            saveSessionsToLocal();
+            renderAll();
+            if (isCloudReady) {
+                await syncToCloud(sessions);
+            }
             showToast('✅ 设定已保存');
         }
 
         // ============================================================
-        //  🧠 核心：自动压缩总结
+        //  🧠 核心：自动压缩总结（优化版 - 无抖动）
         // ============================================================
-        async function generateSummary(showHint) {
+        async function generateSummary(showToastMsg) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
 
             var key = localStorage.getItem('deepseek_api_key');
             if (!key) { showToast('请先保存 API Key'); return; }
 
-            // 收集所有 user 和 assistant 消息作为历史
             var historyMessages = [];
             for (var i = 0; i < session.messages.length; i++) {
                 var m = session.messages[i];
@@ -1812,10 +1805,11 @@
 
             isCompressing = true;
             manualSummaryBtn.disabled = true;
-            showToast('🧠 正在生成摘要...');
+            if (showToastMsg !== false) {
+                showToast('🧠 正在生成摘要...');
+            }
 
             try {
-                // 构建压缩用的 prompt
                 var historyText = '';
                 for (var i = 0; i < historyMessages.length; i++) {
                     var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
@@ -1861,11 +1855,21 @@
                     session.summary = summary;
                     session.updateTime = new Date().toISOString();
 
-                    // 如果摘要生成成功，在对话中插入一条提示
-                   
-                    await afterDataChange();
-                    renderAll();
-                    showToast('✅ 摘要已生成！');
+                    // ★★★ 关键优化：只保存数据 + 更新摘要区，不重绘聊天框 ★★★
+                    saveSessionsToLocal();
+                    renderSummaryOnly();
+                    updateTokenInfo();
+
+                    // 云端后台同步（不阻塞界面）
+                    if (isCloudReady) {
+                        syncToCloud(sessions).catch(function(e) {
+                            console.log('后台同步失败:', e);
+                        });
+                    }
+
+                    if (showToastMsg !== false) {
+                        showToast('✅ 摘要已生成！');
+                    }
                 } else {
                     throw new Error('API 返回异常');
                 }
@@ -1883,36 +1887,33 @@
             }
         }
 
-        // 检查是否需要自动压缩
+        // 检查是否需要自动压缩（静默执行）
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
 
             var msgCount = countUserAssistantMessages(session.messages);
-            // 如果消息数达到阈值，且还没有摘要，或者摘要已存在但消息数又增长了很多（比如超过阈值+5），重新压缩
             var hasSummary = session.summary && session.summary.length > 0;
 
-            // 首次达到阈值：压缩
             if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && !hasSummary) {
                 console.log('🔄 触发自动压缩，消息数: ' + msgCount);
                 setTimeout(function() {
-                    generateSummary(true);
+                    generateSummary(false); // 静默压缩，不显示 Toast
                 }, 500);
                 return;
             }
 
-            // 如果已有摘要，但消息数增长了很多（超过阈值+8），重新压缩更新摘要
             if (hasSummary && msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT + 8) {
                 console.log('🔄 触发摘要更新，消息数: ' + msgCount);
                 setTimeout(function() {
-                    generateSummary(true);
+                    generateSummary(false); // 静默压缩，不显示 Toast
                 }, 500);
                 return;
             }
         }
 
         // ============================================================
-        //  📤 发送消息（核心修改）
+        //  📤 发送消息
         // ============================================================
         async function sendMessage(msg, isEdit) {
             if (typeof msg !== 'string') {
@@ -1926,9 +1927,7 @@
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
 
-            // 检查是否有设定
             if (!session.systemPrompt || session.systemPrompt === DEFAULT_SYSTEM_PROMPT) {
-                // 允许继续，但给个提示
                 if (session.messages.length === 0) {
                     showToast('💡 建议先设定剧本再开始对话');
                 }
@@ -1942,7 +1941,6 @@
                 renderAll();
             }
 
-            // 清理 loading 消息
             var newMsgs = [];
             for (var i = 0; i < session.messages.length; i++) {
                 if (session.messages[i].role !== 'loading') newMsgs.push(session.messages[i]);
@@ -1957,15 +1955,11 @@
 
             try {
                 var maxTokens = parseInt(maxTokensSlider.value) || 2048;
-
-                // ===== 构建上下文：设定 + 摘要 + 最近 N 条 =====
                 var contextMessages = [];
 
-                // 1. 系统设定（固定不变）
                 var systemPrompt = session.systemPrompt || DEFAULT_SYSTEM_PROMPT;
                 contextMessages.push({ role: 'system', content: systemPrompt });
 
-                // 2. 如果有摘要，添加摘要
                 if (session.summary && session.summary.length > 0) {
                     contextMessages.push({
                         role: 'system',
@@ -1973,7 +1967,6 @@
                     });
                 }
 
-                // 3. 收集所有 user/assistant 消息
                 var historyMsgs = [];
                 for (var i = 0; i < session.messages.length; i++) {
                     var m = session.messages[i];
@@ -1982,15 +1975,11 @@
                     }
                 }
 
-                // 4. 只取最近 KEEP_RECENT 条
                 var recentMsgs = historyMsgs.slice(-COMPRESS_CONFIG.KEEP_RECENT);
-
-                // 5. 如果历史消息总数少于 KEEP_RECENT，全部带上
                 var msgsToSend = historyMsgs.length <= COMPRESS_CONFIG.KEEP_RECENT ?
                     historyMsgs :
                     recentMsgs;
 
-                // 6. 组装最终消息列表
                 for (var i = 0; i < msgsToSend.length; i++) {
                     contextMessages.push({
                         role: msgsToSend[i].role,
@@ -1998,7 +1987,6 @@
                     });
                 }
 
-                // 调试信息
                 console.log('📤 上下文构建: 设定=' + (systemPrompt.length) + '字, 摘要=' + (session.summary ? session.summary
                     .length : 0) + '字, 消息数=' + msgsToSend.length);
 
@@ -2018,7 +2006,6 @@
 
                 var data = await response.json();
 
-                // 移除 loading
                 var newMsgs2 = [];
                 for (var j = 0; j < session.messages.length; j++) {
                     if (session.messages[j].role !== 'loading') newMsgs2.push(session.messages[j]);
@@ -2040,7 +2027,7 @@
                     saveSessionsToLocal();
                     renderAll();
 
-                    // ===== 发送后检查是否需要压缩 =====
+                    // 发送后检查是否需要压缩
                     checkAndCompress();
 
                 } else {
@@ -2076,7 +2063,7 @@
         }
 
         // ============================================================
-        //  消息操作（保留）
+        //  消息操作
         // ============================================================
         function deleteMessage(index) {
             var session = getCurrentSession();
@@ -2099,9 +2086,12 @@
             if (!confirm('确定删除这条消息' + (deleteCount > 1 ? '及其后续回复' : '') + '吗？')) return;
             session.messages.splice(index, deleteCount);
             session.updateTime = new Date().toISOString();
-            // 删除后重置摘要（因为历史变了）
             session.summary = '';
-            afterDataChange();
+            saveSessionsToLocal();
+            renderAll();
+            if (isCloudReady) {
+                syncToCloud(sessions).catch(function(e) { console.log('后台同步失败:', e); });
+            }
             showToast('已删除，摘要已重置');
         }
 
@@ -2158,10 +2148,12 @@
                         }
 
                         session.updateTime = new Date().toISOString();
-                        // 重置摘要
                         session.summary = '';
                         saveSessionsToLocal();
                         renderAll();
+                        if (isCloudReady) {
+                            syncToCloud(sessions).catch(function(e) { console.log('后台同步失败:', e); });
+                        }
                         showToast('✅ 已修改，摘要已重置');
 
                         setTimeout(function() {
@@ -2195,7 +2187,7 @@
         }
 
         // ============================================================
-        //  选择模式（保留）
+        //  选择模式
         // ============================================================
         function exitSelectMode() {
             selectMode = false;
@@ -2267,7 +2259,7 @@
         }
 
         // ============================================================
-        //  复制/导出（保留）
+        //  复制/导出
         // ============================================================
         function getAllText() {
             var session = getCurrentSession();
@@ -2345,7 +2337,6 @@
         // ============================================================
         //  事件绑定
         // ============================================================
-        // API Key
         saveKeyBtn.addEventListener('click', function() {
             var key = apiKeyInput.value.trim();
             if (!key) { showToast('请输入 API Key'); return; }
@@ -2366,13 +2357,16 @@
                     session.messages.push({ role: 'assistant', content: '✅ API Key 已更新！' });
                 }
                 session.updateTime = new Date().toISOString();
-                afterDataChange();
+                saveSessionsToLocal();
+                renderAll();
+                if (isCloudReady) {
+                    syncToCloud(sessions).catch(function(e) { console.log('后台同步失败:', e); });
+                }
             }
             showToast('✅ API Key 已保存');
             forceEnableInput();
         });
 
-        // 折叠
         toggleBtn.addEventListener('click', function() {
             isCollapsed = !isCollapsed;
             if (isCollapsed) {
@@ -2386,10 +2380,8 @@
             }
         });
 
-        // 设定保存
         savePromptBtn.addEventListener('click', saveSystemPrompt);
 
-        // 手动压缩
         manualSummaryBtn.addEventListener('click', function() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2401,7 +2393,6 @@
             generateSummary(true);
         });
 
-        // System Prompt 输入框自动保存（Ctrl+Enter）
         systemPromptInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -2409,7 +2400,6 @@
             }
         });
 
-        // 重命名
         renameBtn.addEventListener('click', function() {
             var newName = renameInput.value.trim();
             if (!newName) { showToast('请输入名称'); return; }
@@ -2420,7 +2410,6 @@
                 renameBtn.click(); }
         });
 
-        // 滑动条
         maxTokensSlider.addEventListener('input', function() {
             maxTokensDisplay.textContent = this.value;
             localStorage.setItem('deepseek_max_tokens', this.value);
@@ -2431,7 +2420,6 @@
             maxTokensDisplay.textContent = savedMaxTokens;
         }
 
-        // 复制
         copyLastBtn.addEventListener('click', function() {
             var text = getLastReply();
             copyToClipboard(text || '没有找到回复');
@@ -2453,7 +2441,6 @@
             showToast('✅ 导出成功');
         });
 
-        // 选择模式
         selectModeBtn.addEventListener('click', function() {
             selectMode = !selectMode;
             if (selectMode) {
@@ -2474,7 +2461,6 @@
             copyToClipboard(text || '请先选择消息');
         });
 
-        // 发送
         sendBtn.addEventListener('click', function() { sendMessage(); });
         userInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -2489,7 +2475,6 @@
 
         newSessionBtn.addEventListener('click', addNewSession);
 
-        // 手动同步
         manualSyncBtn.addEventListener('click', async function() {
             if (!isCloudReady) {
                 showToast('云端未连接，尝试初始化...');
@@ -2520,7 +2505,6 @@
             }
         });
 
-        // 点击外部关闭touch actions
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.message-wrapper') && !e.target.closest('.msg-actions')) {
                 document.querySelectorAll('.message-wrapper.touch-show').forEach(function(el) {
@@ -2537,12 +2521,10 @@
 
             loadSessionsFromLocal();
 
-            // 确保当前对话有效
             if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
                 currentSessionId = sessions[0].id;
             }
 
-            // 如果有 API Key
             if (API_KEY) {
                 apiKeyInput.value = API_KEY;
                 enableChat(true);
@@ -2554,7 +2536,6 @@
             renderAll();
             forceEnableInput();
 
-            // 云端同步
             if (isCloudReady) {
                 const cloudData = await loadFromCloud();
                 if (cloudData !== null && cloudData.length > 0) {
@@ -2576,7 +2557,6 @@
 
         init();
 
-        // 暴露全局
         window.sendMessage = sendMessage;
         window.generateSummary = generateSummary;
         window.forceEnableInput = forceEnableInput;
