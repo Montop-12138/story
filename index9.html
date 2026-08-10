@@ -1862,14 +1862,7 @@
                     session.updateTime = new Date().toISOString();
 
                     // 如果摘要生成成功，在对话中插入一条提示
-                    if (showHint !== false) {
-                        session.messages.push({
-                            role: 'compact-hint',
-                            content: '📌 已自动压缩历史对话，生成摘要。当前上下文：设定 + 摘要 + 最近 ' + COMPRESS_CONFIG
-                                .KEEP_RECENT + ' 条消息。'
-                        });
-                    }
-
+                   
                     await afterDataChange();
                     renderAll();
                     showToast('✅ 摘要已生成！');
