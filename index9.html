@@ -369,7 +369,7 @@
             transform: scale(0.95);
         }
 
-        /* ===== 新增：设定输入区 ===== */
+        /* ===== 设定输入区 ===== */
         .prompt-section {
             padding: 4px 0;
             flex-shrink: 0;
@@ -671,19 +671,17 @@
         }
 
         .message-wrapper .msg-actions {
-            display: none;
-            gap: 3px;
-            margin-top: 2px;
+            display: flex;
+            gap: 4px;
+            margin-top: 3px;
             font-size: 10px;
             flex-wrap: wrap;
+            opacity: 0.6;
+            transition: opacity 0.2s;
         }
-        .message-wrapper:hover .msg-actions {
-            display: flex;
+        .message-wrapper .msg-actions:hover {
+            opacity: 1;
         }
-        .message-wrapper.touch-show .msg-actions {
-            display: flex;
-        }
-
         .message-wrapper .msg-actions button {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(4px);
@@ -711,6 +709,18 @@
         }
         .message-wrapper .msg-actions .edit-msg-btn:hover {
             background: #dbe4fe;
+        }
+        .message-wrapper .msg-actions .refresh-btn {
+            color: #f59e0b;
+        }
+        .message-wrapper .msg-actions .refresh-btn:hover {
+            background: #fef3c7;
+        }
+        .message-wrapper .msg-actions .expand-btn {
+            color: #8b5cf6;
+        }
+        .message-wrapper .msg-actions .expand-btn:hover {
+            background: #ede9fe;
         }
 
         .message-wrapper.select-mode .msg-actions {
@@ -1040,6 +1050,10 @@
                 max-height: 40px;
                 padding: 3px 8px;
             }
+            .message-wrapper .msg-actions button {
+                font-size: 9px;
+                padding: 1px 6px;
+            }
         }
     </style>
 </head>
@@ -1084,7 +1098,7 @@
                     </div>
                 </div>
 
-                <!-- ===== 新增：设定输入区 ===== -->
+                <!-- ===== 设定输入区 ===== -->
                 <div class="prompt-section" id="promptSection">
                     <span class="prompt-label">
                         📜 剧本设定（System Prompt）
@@ -1295,7 +1309,7 @@
         }
 
         // ============================================================
-        //  云端初始化（精简版）
+        //  云端初始化
         // ============================================================
         const ENV_ID = 'deepseek-chat-d5gg0748z3b9dfe24';
         let cloudApp = null;
@@ -1329,7 +1343,7 @@
         }
 
         // ============================================================
-        //  云端数据操作（精简版）
+        //  云端数据操作
         // ============================================================
         async function loadFromCloud() {
             if (!isCloudReady || !cloudDb) return null;
@@ -1367,7 +1381,6 @@
                 setSyncStatus('syncing');
                 const collection = cloudDb.collection(COLLECTION_NAME);
                 const existing = await collection.limit(100).get();
-                // 安全处理 existing.data
                 var existingData = [];
                 if (existing && existing.data && Array.isArray(existing.data)) {
                     existingData = existing.data;
@@ -1458,7 +1471,7 @@
         }
 
         // ============================================================
-        //  渲染（优化：分离摘要更新和聊天框重绘）
+        //  渲染
         // ============================================================
         function renderSessionTabs() {
             sessionBar.innerHTML = '';
@@ -1533,7 +1546,7 @@
                     wrapper.classList.add('user-wrapper');
                 }
 
-                if (selectMode && msg.role !== 'error' && msg.role !== 'loading' && msg.role !== 'compact-hint') {
+                if (selectMode && msg.role !== 'error' && msg.role !== 'loading') {
                     wrapper.classList.add('select-mode');
                     var checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -1549,14 +1562,73 @@
                 div.className = 'message ' + msg.role;
                 if (msg.role === 'error' || msg.role === 'loading') {
                     div.textContent = msg.content;
-                } else if (msg.role === 'compact-hint') {
-                    div.textContent = '🧠 ' + msg.content;
                 } else {
                     var contentSpan = document.createElement('span');
                     contentSpan.className = 'message-content';
                     contentSpan.innerHTML = msg.content.replace(/\n/g, '<br>');
                     div.appendChild(contentSpan);
 
+                    // 消息操作按钮
+                    if (!selectMode && msg.role !== 'error' && msg.role !== 'loading') {
+                        var actions = document.createElement('div');
+                        actions.className = 'msg-actions';
+
+                        // 编辑按钮（仅用户消息）
+                        if (msg.role === 'user') {
+                            var editBtn = document.createElement('button');
+                            editBtn.className = 'edit-msg-btn';
+                            editBtn.textContent = '✏️ 编辑';
+                            editBtn.addEventListener('click', (function(idx) {
+                                return function(e) {
+                                    e.stopPropagation();
+                                    startEditMessage(idx);
+                                };
+                            })(i));
+                            actions.appendChild(editBtn);
+                        }
+
+                        // 刷新按钮（仅 AI 消息）
+                        if (msg.role === 'assistant') {
+                            var refreshBtn = document.createElement('button');
+                            refreshBtn.className = 'refresh-btn';
+                            refreshBtn.textContent = '🔄 刷新';
+                            refreshBtn.addEventListener('click', (function(idx) {
+                                return function(e) {
+                                    e.stopPropagation();
+                                    refreshMessage(idx);
+                                };
+                            })(i));
+                            actions.appendChild(refreshBtn);
+                        }
+
+                        // 扩写按钮（用户和 AI 都可以）
+                        var expandBtn = document.createElement('button');
+                        expandBtn.className = 'expand-btn';
+                        expandBtn.textContent = '📝 扩写';
+                        expandBtn.addEventListener('click', (function(idx) {
+                            return function(e) {
+                                e.stopPropagation();
+                                expandMessage(idx);
+                            };
+                        })(i));
+                        actions.appendChild(expandBtn);
+
+                        // 删除按钮
+                        var delBtn = document.createElement('button');
+                        delBtn.className = 'del-msg-btn';
+                        delBtn.textContent = '🗑️ 删除';
+                        delBtn.addEventListener('click', (function(idx) {
+                            return function(e) {
+                                e.stopPropagation();
+                                deleteMessage(idx);
+                            };
+                        })(i));
+                        actions.appendChild(delBtn);
+
+                        div.appendChild(actions);
+                    }
+
+                    // 编辑模式（用户消息专用）
                     if (msg.role === 'user') {
                         var textarea = document.createElement('textarea');
                         textarea.className = 'edit-textarea';
@@ -1587,41 +1659,14 @@
                         div.appendChild(editActions);
                     }
 
-                    if (!selectMode && msg.role !== 'error' && msg.role !== 'loading' && msg.role !== 'compact-hint') {
-                        var actions = document.createElement('div');
-                        actions.className = 'msg-actions';
-                        if (msg.role === 'user') {
-                            var editBtn = document.createElement('button');
-                            editBtn.className = 'edit-msg-btn';
-                            editBtn.textContent = '✏️ 编辑';
-                            editBtn.addEventListener('click', (function(idx) {
-                                return function(e) {
-                                    e.stopPropagation();
-                                    startEditMessage(idx);
-                                };
-                            })(i));
-                            actions.appendChild(editBtn);
-                        }
-                        var delBtn = document.createElement('button');
-                        delBtn.className = 'del-msg-btn';
-                        delBtn.textContent = '🗑️ 删除';
-                        delBtn.addEventListener('click', (function(idx) {
-                            return function(e) {
-                                e.stopPropagation();
-                                deleteMessage(idx);
-                            };
-                        })(i));
-                        actions.appendChild(delBtn);
-                        div.appendChild(actions);
-
-                        div.addEventListener('click', (function(idx) {
-                            return function(e) {
-                                if (e.target.closest('.edit-actions') || e.target.closest('.msg-actions'))
-                                    return;
-                                toggleTouchActions(idx);
-                            };
-                        })(i));
-                    }
+                    // 点击触屏设备显示操作
+                    div.addEventListener('click', (function(idx) {
+                        return function(e) {
+                            if (e.target.closest('.edit-actions') || e.target.closest('.msg-actions'))
+                                return;
+                            toggleTouchActions(idx);
+                        };
+                    })(i));
                 }
 
                 wrapper.appendChild(div);
@@ -1632,7 +1677,6 @@
             }, 50);
         }
 
-        // 只更新摘要显示区（不重绘聊天框）
         function renderSummaryOnly() {
             var session = getCurrentSession();
             if (session && session.summary && session.summary.length > 0) {
@@ -1776,7 +1820,142 @@
         }
 
         // ============================================================
-        //  🧠 核心：自动压缩总结（优化版 - 无抖动）
+        //  🆕 刷新回复功能
+        // ============================================================
+        async function refreshMessage(index) {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            if (index < 0 || index >= session.messages.length) return;
+            var msg = session.messages[index];
+            if (msg.role !== 'assistant') {
+                showToast('只能刷新 AI 的回复');
+                return;
+            }
+
+            // 找到对应的用户消息（往前找最近的 user 消息）
+            var userIndex = -1;
+            for (var i = index - 1; i >= 0; i--) {
+                if (session.messages[i].role === 'user') {
+                    userIndex = i;
+                    break;
+                }
+            }
+            if (userIndex === -1) {
+                showToast('没有找到对应的用户消息');
+                return;
+            }
+
+            var userMsg = session.messages[userIndex];
+            var userContent = userMsg.content;
+
+            // 删除当前 AI 回复及之后的所有消息
+            session.messages.splice(index, session.messages.length - index);
+
+            // 清除摘要（因为历史变了）
+            session.summary = '';
+            saveSessionsToLocal();
+            renderAll();
+
+            showToast('🔄 正在重新生成...');
+
+            // 重新发送用户消息
+            setTimeout(function() {
+                sendMessage(userContent, true);
+            }, 200);
+        }
+
+        // ============================================================
+        //  🆕 扩写功能
+        // ============================================================
+        async function expandMessage(index) {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            if (index < 0 || index >= session.messages.length) return;
+            var msg = session.messages[index];
+            if (msg.role === 'error' || msg.role === 'loading') {
+                showToast('无法扩写此消息');
+                return;
+            }
+
+            var key = localStorage.getItem('deepseek_api_key');
+            if (!key) { showToast('请先保存 API Key'); return; }
+
+            var originalContent = msg.content;
+            var isUser = msg.role === 'user';
+
+            showToast('📝 正在扩写...');
+
+            try {
+                var expandPrompt = isUser ?
+                    '请将以下用户消息扩写得更详细、更丰富，保留原意但增加更多细节和描述。只输出扩写后的内容，不要加任何前缀：\n\n' + originalContent :
+                    '请将以下 AI 回复扩写得更详细、更丰富，保留原意但增加更多细节和描述。只输出扩写后的内容，不要加任何前缀：\n\n' + originalContent;
+
+                var response = await fetch('https://api.deepseek.com/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + key
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-v4-flash',
+                        messages: [
+                            { role: 'system', content: '你是文本扩写助手。只扩写内容，不要添加评论或前缀。' },
+                            { role: 'user', content: expandPrompt }
+                        ],
+                        max_tokens: Math.min(parseInt(maxTokensSlider.value) || 2048, 1024),
+                        temperature: 0.7
+                    })
+                });
+
+                var data = await response.json();
+
+                if (!response.ok) {
+                    var errMsg = data.error ? data.error.message : '请求失败';
+                    throw new Error('错误 ' + response.status + ': ' + errMsg);
+                }
+
+                if (data.choices && data.choices[0]) {
+                    var expanded = data.choices[0].message.content.trim();
+
+                    // 替换原消息内容
+                    msg.content = expanded;
+                    session.updateTime = new Date().toISOString();
+
+                    // 如果扩写的是用户消息，删除其后的所有消息（需要重新生成回复）
+                    if (isUser) {
+                        var nextIndex = index + 1;
+                        if (nextIndex < session.messages.length) {
+                            session.messages.splice(nextIndex);
+                        }
+                        session.summary = '';
+                        saveSessionsToLocal();
+                        renderAll();
+                        showToast('✅ 扩写完成，正在重新生成回复...');
+                        setTimeout(function() {
+                            sendMessage(expanded, true);
+                        }, 300);
+                    } else {
+                        // 扩写 AI 消息，直接替换
+                        saveSessionsToLocal();
+                        renderAll();
+                        showToast('✅ 扩写完成！');
+                    }
+                } else {
+                    throw new Error('API 返回异常');
+                }
+
+            } catch (error) {
+                var errorText = '❌ 扩写失败: ' + error.message;
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    errorText = '❌ API Key 无效，请重新输入';
+                }
+                showToast(errorText);
+                console.error(errorText);
+            }
+        }
+
+        // ============================================================
+        //  🧠 核心：自动压缩总结
         // ============================================================
         async function generateSummary(showToastMsg) {
             var session = getCurrentSession();
@@ -1855,12 +2034,10 @@
                     session.summary = summary;
                     session.updateTime = new Date().toISOString();
 
-                    // ★★★ 关键优化：只保存数据 + 更新摘要区，不重绘聊天框 ★★★
                     saveSessionsToLocal();
                     renderSummaryOnly();
                     updateTokenInfo();
 
-                    // 云端后台同步（不阻塞界面）
                     if (isCloudReady) {
                         syncToCloud(sessions).catch(function(e) {
                             console.log('后台同步失败:', e);
@@ -1887,7 +2064,6 @@
             }
         }
 
-        // 检查是否需要自动压缩（静默执行）
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
@@ -1898,7 +2074,7 @@
             if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && !hasSummary) {
                 console.log('🔄 触发自动压缩，消息数: ' + msgCount);
                 setTimeout(function() {
-                    generateSummary(false); // 静默压缩，不显示 Toast
+                    generateSummary(false);
                 }, 500);
                 return;
             }
@@ -1906,7 +2082,7 @@
             if (hasSummary && msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT + 8) {
                 console.log('🔄 触发摘要更新，消息数: ' + msgCount);
                 setTimeout(function() {
-                    generateSummary(false); // 静默压缩，不显示 Toast
+                    generateSummary(false);
                 }, 500);
                 return;
             }
@@ -2027,7 +2203,6 @@
                     saveSessionsToLocal();
                     renderAll();
 
-                    // 发送后检查是否需要压缩
                     checkAndCompress();
 
                 } else {
@@ -2100,7 +2275,7 @@
             if (!session) return;
             if (index < 0 || index >= session.messages.length) return;
             var msg = session.messages[index];
-            if (msg.role === 'error' || msg.role === 'loading' || msg.role === 'assistant' || msg.role === 'compact-hint') {
+            if (msg.role === 'error' || msg.role === 'loading' || msg.role === 'assistant') {
                 showToast('只能编辑用户消息');
                 return;
             }
@@ -2202,7 +2377,7 @@
             var session = getCurrentSession();
             if (!session) return;
             var msg = session.messages[index];
-            if (msg.role === 'error' || msg.role === 'loading' || msg.role === 'compact-hint') return;
+            if (msg.role === 'error' || msg.role === 'loading') return;
             if (selectedIndices.has(index)) {
                 selectedIndices.delete(index);
             } else {
@@ -2219,7 +2394,7 @@
                 var total = 0;
                 for (var i = 0; i < session.messages.length; i++) {
                     var m = session.messages[i];
-                    if (m.role !== 'error' && m.role !== 'loading' && m.role !== 'compact-hint') total++;
+                    if (m.role !== 'error' && m.role !== 'loading') total++;
                 }
                 selectAllCheckbox.checked = selectedIndices.size === total && total > 0;
             }
@@ -2233,7 +2408,7 @@
             if (allChecked) {
                 for (var i = 0; i < session.messages.length; i++) {
                     var m = session.messages[i];
-                    if (m.role !== 'error' && m.role !== 'loading' && m.role !== 'compact-hint') {
+                    if (m.role !== 'error' && m.role !== 'loading') {
                         selectedIndices.add(i);
                     }
                 }
@@ -2272,7 +2447,7 @@
             text += '='.repeat(40) + '\n\n';
             for (var i = 0; i < session.messages.length; i++) {
                 var msg = session.messages[i];
-                if (msg.role === 'error' || msg.role === 'loading' || msg.role === 'compact-hint') continue;
+                if (msg.role === 'error' || msg.role === 'loading') continue;
                 var label = msg.role === 'user' ? '👤 用户' : '🤖 AI';
                 text += '【' + label + '】\n' + msg.content + '\n\n';
             }
@@ -2550,7 +2725,7 @@
                 }
             }
 
-            console.log('✅ 初始化完成（index9 - 自动摘要版）');
+            console.log('✅ 初始化完成（index9 - 自动摘要版 + 刷新/扩写）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
         }
@@ -2560,6 +2735,8 @@
         window.sendMessage = sendMessage;
         window.generateSummary = generateSummary;
         window.forceEnableInput = forceEnableInput;
+        window.refreshMessage = refreshMessage;
+        window.expandMessage = expandMessage;
         window.COMPRESS_CONFIG = COMPRESS_CONFIG;
     </script>
 </body>
