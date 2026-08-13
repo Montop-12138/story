@@ -8,7 +8,6 @@
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js">
     </script>
     <style>
-        /* ===== 全局重置 ===== */
         * {
             margin: 0;
             padding: 0;
@@ -23,7 +22,6 @@
             overflow: hidden;
         }
 
-        /* ===== 主容器 ===== */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -41,7 +39,6 @@
             position: relative;
         }
 
-        /* ===== 顶部固定区域 ===== */
         .header-fixed {
             flex-shrink: 0;
             z-index: 10;
@@ -53,7 +50,6 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* ===== 标题栏 ===== */
         h1 {
             font-size: 16px;
             color: #ffffff;
@@ -204,7 +200,6 @@
             padding: 3px 8px;
         }
 
-        /* ===== 折叠区域 ===== */
         .collapsible-section {
             transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
             max-height: 460px;
@@ -247,7 +242,6 @@
             font-size: 14px;
         }
 
-        /* ===== 控制栏 ===== */
         .api-section {
             display: flex;
             gap: 4px;
@@ -369,7 +363,6 @@
             transform: scale(0.95);
         }
 
-        /* ===== 设定输入区 ===== */
         .prompt-section {
             padding: 4px 0;
             flex-shrink: 0;
@@ -449,7 +442,6 @@
             cursor: not-allowed;
         }
 
-        /* ===== 摘要显示区 ===== */
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -550,7 +542,6 @@
             cursor: pointer;
         }
 
-        /* ===== 会话标签栏 ===== */
         .session-bar {
             display: flex;
             gap: 3px;
@@ -630,7 +621,6 @@
             transform: scale(0.95);
         }
 
-        /* ===== 聊天区域 ===== */
         .chat-scroll-area {
             flex: 1;
             overflow-y: auto;
@@ -656,7 +646,6 @@
             min-height: 100%;
         }
 
-        /* ===== 消息样式 ===== */
         .message-wrapper {
             position: relative;
             display: flex;
@@ -857,7 +846,6 @@
             }
         }
 
-        /* ===== 输入区域 ===== */
         .input-section {
             display: flex;
             gap: 6px;
@@ -894,6 +882,12 @@
             color: rgba(0, 0, 0, 0.3);
             font-size: 13px;
         }
+        .input-section .send-btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex-shrink: 0;
+        }
         .input-section button {
             padding: 8px 18px;
             background: linear-gradient(135deg, #4facfe, #00d4ff);
@@ -903,7 +897,6 @@
             font-size: 14px;
             cursor: pointer;
             font-weight: 600;
-            flex-shrink: 0;
             height: 40px;
             box-shadow: 0 4px 14px rgba(79, 172, 254, 0.3);
             transition: all 0.3s;
@@ -916,8 +909,20 @@
             box-shadow: none;
             cursor: not-allowed;
         }
+        .input-section .expand-indicator {
+            font-size: 9px;
+            color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.12);
+            padding: 2px 10px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            white-space: nowrap;
+        }
+        .input-section .expand-indicator.show {
+            display: block;
+        }
 
-        /* ===== 底部状态 ===== */
         .status-tip {
             text-align: center;
             font-size: 9px;
@@ -954,7 +959,6 @@
             margin-left: 6px;
         }
 
-        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -978,7 +982,6 @@
             transform: translateX(-50%) scale(1);
         }
 
-        /* ===== 响应式 ===== */
         @supports (padding: max(0px)) {
             body {
                 padding-left: max(8px, env(safe-area-inset-left));
@@ -1061,10 +1064,8 @@
 
     <div class="app-container">
 
-        <!-- ===== 顶部固定区域 ===== -->
         <div class="header-fixed">
 
-            <!-- ===== 标题栏 ===== -->
             <h1>
                 <div class="title-left">
                     <span class="ds-icon"><span>DS</span></span>
@@ -1079,7 +1080,6 @@
                 </div>
             </h1>
 
-            <!-- ===== 折叠区域 ===== -->
             <div class="collapsible-section" id="collapsibleSection">
                 <div class="api-section">
                     <input type="password" id="apiKeyInput" placeholder="输入 API Key" />
@@ -1098,7 +1098,6 @@
                     </div>
                 </div>
 
-                <!-- ===== 设定输入区 ===== -->
                 <div class="prompt-section" id="promptSection">
                     <span class="prompt-label">
                         📜 剧本设定（System Prompt）
@@ -1106,13 +1105,12 @@
                         <span class="badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;">自动压缩</span>
                     </span>
                     <div class="prompt-row">
-                        <textarea id="systemPromptInput" rows="2" placeholder="输入你的世界观、角色、规则设定... 例如：你是一个中世纪奇幻世界的主持人，玩家扮演勇者，目标是打败恶龙。"></textarea>
+                        <textarea id="systemPromptInput" rows="2" placeholder="输入你的世界观、角色、规则设定..."></textarea>
                         <div class="prompt-actions">
                             <button id="savePromptBtn">保存设定</button>
                             <button class="btn-summary" id="manualSummaryBtn" title="手动触发压缩总结">🧠 总结</button>
                         </div>
                     </div>
-                    <!-- 摘要显示区 -->
                     <div class="summary-display" id="summaryDisplay">
                         <span class="summary-label">📌 当前摘要：</span>
                         <span class="summary-text" id="summaryText">暂无摘要</span>
@@ -1132,17 +1130,14 @@
                 </div>
             </div>
 
-            <!-- ===== 会话标签栏 ===== -->
             <div class="session-bar" id="sessionBar"></div>
 
         </div>
 
-        <!-- ===== 聊天滚动区域 ===== -->
         <div class="chat-scroll-area" id="chatScrollArea">
             <div class="chat-box" id="chatBox"></div>
         </div>
 
-        <!-- ===== 底部固定区域 ===== -->
         <div class="status-tip" id="statusTip">
             <span class="sync-status" id="syncStatus">
                 <span class="sync-dot" id="syncDot"></span>
@@ -1154,7 +1149,10 @@
 
         <div class="input-section">
             <textarea id="userInput" rows="1" placeholder="输入消息..." disabled></textarea>
-            <button id="sendBtn" disabled>发送</button>
+            <div class="send-btn-container">
+                <button id="sendBtn" disabled>发送</button>
+                <span class="expand-indicator" id="expandIndicator">✏️ 扩写结果·确认后发送</span>
+            </div>
         </div>
 
         <div class="toast" id="toast"></div>
@@ -1162,7 +1160,7 @@
 
     <script>
         // ============================================================
-        //  🎭 默认 System Prompt（首次使用时）
+        //  🎭 默认 System Prompt
         // ============================================================
         const DEFAULT_SYSTEM_PROMPT = '你是一个沉浸式文字游戏的主持人。请根据用户提供的设定和对话历史，自然地推动剧情发展。';
 
@@ -1188,6 +1186,7 @@
         let isSyncing = false;
         let touchMessageIndex = null;
         let isCompressing = false;
+        let expandedText = null; // 存储扩写结果，待用户确认
 
         const COLLECTION_NAME = 'conversations_v9';
 
@@ -1210,6 +1209,7 @@
         const syncDot = document.getElementById('syncDot');
         const syncText = document.getElementById('syncText');
         const tokenInfo = document.getElementById('tokenInfo');
+        const expandIndicator = document.getElementById('expandIndicator');
 
         const maxTokensSlider = document.getElementById('maxTokensSlider');
         const maxTokensDisplay = document.getElementById('maxTokensDisplay');
@@ -1568,12 +1568,10 @@
                     contentSpan.innerHTML = msg.content.replace(/\n/g, '<br>');
                     div.appendChild(contentSpan);
 
-                    // 消息操作按钮
                     if (!selectMode && msg.role !== 'error' && msg.role !== 'loading') {
                         var actions = document.createElement('div');
                         actions.className = 'msg-actions';
 
-                        // 编辑按钮（仅用户消息）
                         if (msg.role === 'user') {
                             var editBtn = document.createElement('button');
                             editBtn.className = 'edit-msg-btn';
@@ -1587,7 +1585,6 @@
                             actions.appendChild(editBtn);
                         }
 
-                        // 刷新按钮（仅 AI 消息）
                         if (msg.role === 'assistant') {
                             var refreshBtn = document.createElement('button');
                             refreshBtn.className = 'refresh-btn';
@@ -1601,7 +1598,7 @@
                             actions.appendChild(refreshBtn);
                         }
 
-                        // 扩写按钮（用户和 AI 都可以）
+                        // 扩写按钮 - 用户和 AI 都显示
                         var expandBtn = document.createElement('button');
                         expandBtn.className = 'expand-btn';
                         expandBtn.textContent = '📝 扩写';
@@ -1613,7 +1610,6 @@
                         })(i));
                         actions.appendChild(expandBtn);
 
-                        // 删除按钮
                         var delBtn = document.createElement('button');
                         delBtn.className = 'del-msg-btn';
                         delBtn.textContent = '🗑️ 删除';
@@ -1628,7 +1624,6 @@
                         div.appendChild(actions);
                     }
 
-                    // 编辑模式（用户消息专用）
                     if (msg.role === 'user') {
                         var textarea = document.createElement('textarea');
                         textarea.className = 'edit-textarea';
@@ -1659,7 +1654,6 @@
                         div.appendChild(editActions);
                     }
 
-                    // 点击触屏设备显示操作
                     div.addEventListener('click', (function(idx) {
                         return function(e) {
                             if (e.target.closest('.edit-actions') || e.target.closest('.msg-actions'))
@@ -1736,11 +1730,31 @@
         }
 
         // ============================================================
+        //  扩写结果显示在输入框（待用户确认）
+        // ============================================================
+        function showExpandedInInput(text) {
+            userInput.value = text;
+            userInput.focus();
+            expandIndicator.classList.add('show');
+            expandedText = text;
+            // 调整输入框高度
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 80) + 'px';
+            showToast('✏️ 扩写结果已填入输入框，确认后点击发送');
+        }
+
+        function clearExpandIndicator() {
+            expandIndicator.classList.remove('show');
+            expandedText = null;
+        }
+
+        // ============================================================
         //  会话操作
         // ============================================================
         function switchSession(sessionId) {
             if (sessionId === currentSessionId) return;
             exitSelectMode();
+            clearExpandIndicator();
             currentSessionId = sessionId;
             localStorage.setItem('deepseek_current_session_v9', currentSessionId);
             renderAll();
@@ -1753,6 +1767,7 @@
             }
             if (!confirm('确定删除这个对话吗？')) return;
             exitSelectMode();
+            clearExpandIndicator();
             var newSessions = [];
             for (var i = 0; i < sessions.length; i++) {
                 if (sessions[i].id !== sessionId) newSessions.push(sessions[i]);
@@ -1772,6 +1787,7 @@
 
         async function addNewSession() {
             exitSelectMode();
+            clearExpandIndicator();
             var s = createSession('新对话', DEFAULT_SYSTEM_PROMPT);
             sessions.push(s);
             currentSessionId = s.id;
@@ -1832,7 +1848,6 @@
                 return;
             }
 
-            // 找到对应的用户消息（往前找最近的 user 消息）
             var userIndex = -1;
             for (var i = index - 1; i >= 0; i--) {
                 if (session.messages[i].role === 'user') {
@@ -1848,24 +1863,20 @@
             var userMsg = session.messages[userIndex];
             var userContent = userMsg.content;
 
-            // 删除当前 AI 回复及之后的所有消息
             session.messages.splice(index, session.messages.length - index);
-
-            // 清除摘要（因为历史变了）
             session.summary = '';
             saveSessionsToLocal();
             renderAll();
 
             showToast('🔄 正在重新生成...');
 
-            // 重新发送用户消息
             setTimeout(function() {
                 sendMessage(userContent, true);
             }, 200);
         }
 
         // ============================================================
-        //  🆕 扩写功能
+        //  🆕 扩写功能（结果填入输入框，不自动发送）
         // ============================================================
         async function expandMessage(index) {
             var session = getCurrentSession();
@@ -1881,14 +1892,17 @@
             if (!key) { showToast('请先保存 API Key'); return; }
 
             var originalContent = msg.content;
-            var isUser = msg.role === 'user';
 
             showToast('📝 正在扩写...');
 
             try {
-                var expandPrompt = isUser ?
-                    '请将以下用户消息扩写得更详细、更丰富，保留原意但增加更多细节和描述。只输出扩写后的内容，不要加任何前缀：\n\n' + originalContent :
-                    '请将以下 AI 回复扩写得更详细、更丰富，保留原意但增加更多细节和描述。只输出扩写后的内容，不要加任何前缀：\n\n' + originalContent;
+                // 精简的扩写指令 - 只扩写言语、动作、心理，不要环境描写
+                var expandPrompt = '请将以下内容扩写，要求：\n' +
+                    '1. 只扩写言语、动作、心理活动\n' +
+                    '2. 不要增加环境描写、场景填充或无关细节\n' +
+                    '3. 保持简洁，不要过度冗余\n' +
+                    '4. 只输出扩写后的内容，不要加任何前缀或说明\n\n' +
+                    '原文：\n' + originalContent;
 
                 var response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
@@ -1899,10 +1913,10 @@
                     body: JSON.stringify({
                         model: 'deepseek-v4-flash',
                         messages: [
-                            { role: 'system', content: '你是文本扩写助手。只扩写内容，不要添加评论或前缀。' },
+                            { role: 'system', content: '你是文本扩写助手。只扩写言语、动作、心理，不加环境描写，保持简洁。' },
                             { role: 'user', content: expandPrompt }
                         ],
-                        max_tokens: Math.min(parseInt(maxTokensSlider.value) || 2048, 1024),
+                        max_tokens: Math.min(parseInt(maxTokensSlider.value) || 2048, 512),
                         temperature: 0.7
                     })
                 });
@@ -1916,30 +1930,8 @@
 
                 if (data.choices && data.choices[0]) {
                     var expanded = data.choices[0].message.content.trim();
-
-                    // 替换原消息内容
-                    msg.content = expanded;
-                    session.updateTime = new Date().toISOString();
-
-                    // 如果扩写的是用户消息，删除其后的所有消息（需要重新生成回复）
-                    if (isUser) {
-                        var nextIndex = index + 1;
-                        if (nextIndex < session.messages.length) {
-                            session.messages.splice(nextIndex);
-                        }
-                        session.summary = '';
-                        saveSessionsToLocal();
-                        renderAll();
-                        showToast('✅ 扩写完成，正在重新生成回复...');
-                        setTimeout(function() {
-                            sendMessage(expanded, true);
-                        }, 300);
-                    } else {
-                        // 扩写 AI 消息，直接替换
-                        saveSessionsToLocal();
-                        renderAll();
-                        showToast('✅ 扩写完成！');
-                    }
+                    // 填入输入框，等待用户确认
+                    showExpandedInInput(expanded);
                 } else {
                     throw new Error('API 返回异常');
                 }
@@ -2097,6 +2089,9 @@
             }
             if (!msg) { showToast('请输入消息'); return; }
 
+            // 清除扩写状态
+            clearExpandIndicator();
+
             var key = localStorage.getItem('deepseek_api_key');
             if (!key) { showToast('请先保存 API Key'); return; }
 
@@ -2113,6 +2108,7 @@
                 session.messages.push({ role: 'user', content: msg, timestamp: new Date().toISOString() });
                 session.updateTime = new Date().toISOString();
                 userInput.value = '';
+                userInput.style.height = 'auto';
                 saveSessionsToLocal();
                 renderAll();
             }
@@ -2259,6 +2255,7 @@
             }
 
             if (!confirm('确定删除这条消息' + (deleteCount > 1 ? '及其后续回复' : '') + '吗？')) return;
+            clearExpandIndicator();
             session.messages.splice(index, deleteCount);
             session.updateTime = new Date().toISOString();
             session.summary = '';
@@ -2636,16 +2633,31 @@
             copyToClipboard(text || '请先选择消息');
         });
 
-        sendBtn.addEventListener('click', function() { sendMessage(); });
+        // 发送按钮 - 发送前清除扩写状态
+        sendBtn.addEventListener('click', function() {
+            // 如果有扩写结果在输入框中，清除指示器
+            if (expandedText) {
+                clearExpandIndicator();
+            }
+            sendMessage();
+        });
+
         userInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
+                if (expandedText) {
+                    clearExpandIndicator();
+                }
                 sendMessage();
             }
         });
         userInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+            // 用户手动修改输入框内容时，清除扩写状态
+            if (expandedText && this.value !== expandedText) {
+                clearExpandIndicator();
+            }
         });
 
         newSessionBtn.addEventListener('click', addNewSession);
@@ -2725,7 +2737,7 @@
                 }
             }
 
-            console.log('✅ 初始化完成（index9 - 自动摘要版 + 刷新/扩写）');
+            console.log('✅ 初始化完成（index9 - 扩写优化版）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
         }
