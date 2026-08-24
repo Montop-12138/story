@@ -435,8 +435,8 @@
             font-size: 11px;
             color: rgba(0, 0, 0, 0.6);
             margin-top: 4px;
-            max-height: 250px;
-            overflow-y: auto;
+            max-height: none;
+            overflow-y: visible;
             border-left: 2px solid rgba(79, 172, 254, 0.2);
             line-height: 1.5;
             display: none;
@@ -1134,7 +1134,7 @@
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 12,
             KEEP_RECENT: 6,
-            SUMMARY_MAX_WORDS: 3000
+            SUMMARY_MAX_WORDS: 2000
         };
 
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
