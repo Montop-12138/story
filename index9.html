@@ -2087,143 +2087,122 @@
             }
         }
 
-        // ============================================================
-        //  🧠 核心：自动压缩总结（方案 B + 3000 字）
-        // ============================================================
-        async function generateSummary(showToastMsg) {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
+// ============================================================
+//  🧠 核心：自动压缩总结（累积式摘要）
+// ============================================================
+async function generateSummary(showToastMsg) {
+    var session = getCurrentSession();
+    if (!session) { showToast('请先创建对话'); return; }
 
-            var key = localStorage.getItem('deepseek_api_key');
-            if (!key) { showToast('请先保存 API Key'); return; }
+    var key = localStorage.getItem('deepseek_api_key');
+    if (!key) { showToast('请先保存 API Key'); return; }
 
-            var historyMessages = [];
-            for (var i = 0; i < session.messages.length; i++) {
-                var m = session.messages[i];
-                if (m.role === 'user' || m.role === 'assistant') {
-                    historyMessages.push(m);
-                }
-            }
-
-            if (historyMessages.length === 0) {
-                showToast('没有对话记录可以总结');
-                return;
-            }
-
-            if (isCompressing) {
-                showToast('⏳ 正在压缩中，请稍候...');
-                return;
-            }
-
-            isCompressing = true;
-            manualSummaryBtn.disabled = true;
-            if (showToastMsg !== false) {
-                showToast('🧠 正在生成摘要...');
-            }
-
-            try {
-                var historyText = '';
-                for (var i = 0; i < historyMessages.length; i++) {
-                    var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
-                    historyText += label + '：' + historyMessages[i].content + '\n';
-                }
-
-                // ============================================================
-                //  方案 B：清单式多角色摘要模板（3000 字）
-                // ============================================================
-                var compressPrompt = '请根据以下对话历史，生成一份结构清晰的剧情摘要。\n\n' +
-                    '请严格按以下格式输出：\n' +
-                    '【当前时间/地点】\n' +
-                    '【当前目标/任务】\n' +
-                    '\n' +
-                    '--- 关系档案 ---\n' +
-                    '\n' +
-                    '【攻略对象 A：姓名】\n' +
-                    '· 当前关系阶段：\n' +
-                    '· 近期互动记录：（按时间顺序，每条用 10-20 字概括关键动作或对话，多条分行）\n' +
-                    '  - 事件1\n' +
-                    '  - 事件2\n' +
-                    '  - 事件3\n' +
-                    '· 对方当前态度：\n' +
-                    '· 玩家真实感受：\n' +
-                    '\n' +
-                    '【攻略对象 B：姓名】\n' +
-                    '· 当前关系阶段：\n' +
-                    '· 近期互动记录：\n' +
-                    '  - 事件1\n' +
-                    '  - 事件2\n' +
-                    '· 对方当前态度：\n' +
-                    '· 玩家真实感受：\n' +
-                    '\n' +
-                    '（有几个攻略对象就写几个，不要遗漏）\n' +
-                    '\n' +
-                    '--- 全局状态 ---\n' +
-                    '【玩家整体状态】\n' +
-                    '【主要矛盾/压力源】\n' +
-                    '【伏笔/未解决线索】\n' +
-                    '\n' +
-                    '输出要求：\n' +
-                    '1. "近期互动记录"按时间顺序列出，每条用 10-20 字概括关键动作或对话\n' +
-                    '2. 不要遗漏任何一次互动，即使是很小的细节也要记录\n' +
-                    '3. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
-                    '4. 每个攻略对象的条目数根据实际互动次数自动调整\n' +
-                    '5. 只输出以上格式内容，不要加任何前缀或说明\n\n' +
-                    '对话历史：\n' + historyText;
-
-                var maxTokens = Math.min(parseInt(maxTokensSlider.value) || 2048, 4096);
-
-                var response = await fetch('https://api.deepseek.com/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + key
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-v4-flash',
-                        messages: [
-                            { role: 'system', content: '你是一个专业的剧本摘要助手。严格按照指定的格式输出。' },
-                            { role: 'user', content: compressPrompt }
-                        ],
-                        max_tokens: maxTokens,
-                        temperature: 0.5
-                    })
-                });
-
-                var data = await response.json();
-
-                if (!response.ok) {
-                    var errMsg = data.error ? data.error.message : '请求失败';
-                    throw new Error('错误 ' + response.status + ': ' + errMsg);
-                }
-
-                if (data.choices && data.choices[0]) {
-                    var summary = data.choices[0].message.content.trim();
-                    session.summary = summary;
-                    session.updateTime = new Date().toISOString();
-
-                    saveSessionsToLocal();
-                    renderSummary();
-                    updateTokenInfo();
-
-                    if (showToastMsg !== false) {
-                        showToast('✅ 摘要已生成！');
-                    }
-                } else {
-                    throw new Error('API 返回异常');
-                }
-
-            } catch (error) {
-                var errorText = '❌ 生成摘要失败: ' + error.message;
-                if (error.message.includes('401') || error.message.includes('403')) {
-                    errorText = '❌ API Key 无效，请重新输入';
-                }
-                showToast(errorText);
-                console.error(errorText);
-            } finally {
-                isCompressing = false;
-                manualSummaryBtn.disabled = false;
-            }
+    // 收集所有 user/assistant 消息
+    var historyMessages = [];
+    for (var i = 0; i < session.messages.length; i++) {
+        var m = session.messages[i];
+        if (m.role === 'user' || m.role === 'assistant') {
+            historyMessages.push(m);
         }
+    }
+
+    if (historyMessages.length === 0) {
+        showToast('没有对话记录可以总结');
+        return;
+    }
+
+    if (isCompressing) {
+        showToast('⏳ 正在压缩中，请稍候...');
+        return;
+    }
+
+    isCompressing = true;
+    manualSummaryBtn.disabled = true;
+    if (showToastMsg !== false) {
+        showToast('🧠 正在生成累积摘要...');
+    }
+
+    try {
+        // 获取旧摘要（如有）
+        var oldSummary = session.summary || '（暂无旧摘要，这是首次生成）';
+
+        // 构建对话历史文本
+        var historyText = '';
+        for (var i = 0; i < historyMessages.length; i++) {
+            var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
+            historyText += label + '：' + historyMessages[i].content + '\n';
+        }
+
+        // ============================================================
+        //  累积式摘要模板
+        // ============================================================
+        var compressPrompt = '你是一个专业的剧本摘要助手。请将以下旧摘要和新对话合并成一份完整的剧情摘要。\n\n' +
+            '【旧摘要】（已经总结过的历史，请保留其中的所有信息）：\n' +
+            oldSummary + '\n\n' +
+            '【新对话】（需要追加的最新内容）：\n' +
+            historyText + '\n\n' +
+            '要求：\n' +
+            '1. 保留旧摘要中的所有剧情信息，不要删除或遗漏任何内容\n' +
+            '2. 将新对话中发生的事件追加到时间线末尾\n' +
+            '3. 按时间顺序排列，标注每个阶段的关键节点\n' +
+            '4. 如果旧摘要已有分阶段的格式，保持格式继续追加\n' +
+            '5. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
+            '6. 只输出合并后的完整摘要，不要加任何前缀或说明';
+
+        var maxTokens = Math.min(parseInt(maxTokensSlider.value) || 2048, 4096);
+
+        var response = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + key
+            },
+            body: JSON.stringify({
+                model: 'deepseek-v4-flash',
+                messages: [
+                    { role: 'system', content: '你是专业的剧本摘要助手。合并旧摘要和新对话，输出一份完整的时间线摘要。' },
+                    { role: 'user', content: compressPrompt }
+                ],
+                max_tokens: maxTokens,
+                temperature: 0.5
+            })
+        });
+
+        var data = await response.json();
+
+        if (!response.ok) {
+            var errMsg = data.error ? data.error.message : '请求失败';
+            throw new Error('错误 ' + response.status + ': ' + errMsg);
+        }
+
+        if (data.choices && data.choices[0]) {
+            var summary = data.choices[0].message.content.trim();
+            session.summary = summary;
+            session.updateTime = new Date().toISOString();
+
+            saveSessionsToLocal();
+            renderSummary();
+            updateTokenInfo();
+
+            if (showToastMsg !== false) {
+                showToast('✅ 累积摘要已生成！');
+            }
+        } else {
+            throw new Error('API 返回异常');
+        }
+
+    } catch (error) {
+        var errorText = '❌ 生成累积摘要失败: ' + error.message;
+        if (error.message.includes('401') || error.message.includes('403')) {
+            errorText = '❌ API Key 无效，请重新输入';
+        }
+        showToast(errorText);
+        console.error(errorText);
+    } finally {
+        isCompressing = false;
+        manualSummaryBtn.disabled = false;
+    }
+}
 
         // ============================================================
         //  自动压缩检查
