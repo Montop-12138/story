@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeepSeek 智能助手 · 自动摘要版</title>
-    <!-- 腾讯云开发 SDK -->
+    <title>DeepSeek 智能助手 · 手动同步版</title>
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js">
     </script>
     <style>
@@ -13,7 +12,6 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         html,
         body {
             height: 100%;
@@ -21,7 +19,6 @@
             background: linear-gradient(145deg, #f0f7ff 0%, #e6f0fa 50%, #dce8f5 100%);
             overflow: hidden;
         }
-
         .app-container {
             display: flex;
             flex-direction: column;
@@ -31,25 +28,21 @@
             padding: 8px 12px;
             background: rgba(255, 255, 255, 0.35);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-radius: 28px;
             border: 1px solid rgba(255, 255, 255, 0.5);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
             overflow: hidden;
             position: relative;
         }
-
         .header-fixed {
             flex-shrink: 0;
             z-index: 10;
             background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border-radius: 20px 20px 0 0;
             padding: 6px 10px 4px 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-
         h1 {
             font-size: 16px;
             color: #ffffff;
@@ -141,7 +134,6 @@
                 opacity: 0.5;
             }
         }
-
         .ds-icon {
             display: inline-flex;
             align-items: center;
@@ -162,7 +154,6 @@
             background-clip: text;
             letter-spacing: 0.5px;
         }
-
         .header-actions {
             display: flex;
             gap: 4px;
@@ -195,11 +186,11 @@
             padding: 3px 8px;
         }
         .btn-sync-manual {
-            background: rgba(255, 255, 255, 0.15);
-            font-size: 13px;
+            background: rgba(255, 255, 255, 0.25);
+            font-size: 10px;
             padding: 3px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
-
         .collapsible-section {
             transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
             max-height: 460px;
@@ -235,13 +226,11 @@
         .collapsible-section.collapsed .prompt-section {
             display: none !important;
         }
-
         .collapsed-mode h1 {
             padding: 4px 10px;
             min-height: 34px;
             font-size: 14px;
         }
-
         .api-section {
             display: flex;
             gap: 4px;
@@ -286,7 +275,6 @@
         .api-section button:active {
             transform: scale(0.97);
         }
-
         .control-bar {
             display: flex;
             flex-wrap: wrap;
@@ -362,7 +350,6 @@
         .control-bar .rename-group button:active {
             transform: scale(0.95);
         }
-
         .prompt-section {
             padding: 4px 0;
             flex-shrink: 0;
@@ -441,7 +428,6 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -466,7 +452,6 @@
         .summary-display .summary-text {
             word-break: break-word;
         }
-
         .share-bar {
             display: flex;
             gap: 3px;
@@ -541,7 +526,6 @@
             border-radius: 6px;
             cursor: pointer;
         }
-
         .session-bar {
             display: flex;
             gap: 3px;
@@ -620,7 +604,6 @@
         .btn-add-session:active {
             transform: scale(0.95);
         }
-
         .chat-scroll-area {
             flex: 1;
             overflow-y: auto;
@@ -638,14 +621,12 @@
             background: rgba(79, 172, 254, 0.3);
             border-radius: 10px;
         }
-
         .chat-box {
             display: flex;
             flex-direction: column;
             gap: 6px;
             min-height: 100%;
         }
-
         .message-wrapper {
             position: relative;
             display: flex;
@@ -658,7 +639,6 @@
         .message-wrapper.user-wrapper {
             align-items: flex-end;
         }
-
         .message-wrapper .msg-actions {
             display: flex;
             gap: 4px;
@@ -711,11 +691,9 @@
         .message-wrapper .msg-actions .expand-btn:hover {
             background: #ede9fe;
         }
-
         .message-wrapper.select-mode .msg-actions {
             display: none !important;
         }
-
         .message-wrapper .msg-checkbox {
             display: none;
             margin-right: 4px;
@@ -735,7 +713,6 @@
         .message-wrapper.select-mode .message {
             flex: 1;
         }
-
         .message {
             max-width: 85%;
             padding: 8px 14px;
@@ -779,7 +756,6 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-bottom-left-radius: 4px;
         }
-
         .message.edit-mode .message-content {
             display: none;
         }
@@ -834,7 +810,6 @@
         .message .edit-actions button:active {
             transform: scale(0.95);
         }
-
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -845,7 +820,6 @@
                 transform: translateY(0) scale(1);
             }
         }
-
         .input-section {
             display: flex;
             gap: 6px;
@@ -854,7 +828,6 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
             border-radius: 0 0 20px 20px;
             padding: 8px 4px 4px 4px;
         }
@@ -922,7 +895,6 @@
         .input-section .expand-indicator.show {
             display: block;
         }
-
         .status-tip {
             text-align: center;
             font-size: 9px;
@@ -958,7 +930,6 @@
             color: rgba(0, 0, 0, 0.25);
             margin-left: 6px;
         }
-
         .toast {
             position: fixed;
             bottom: 100px;
@@ -981,7 +952,6 @@
             opacity: 1;
             transform: translateX(-50%) scale(1);
         }
-
         @supports (padding: max(0px)) {
             body {
                 padding-left: max(8px, env(safe-area-inset-left));
@@ -1074,7 +1044,7 @@
                     <span class="sync-badge" id="syncBadge">☁️ 云端</span>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-sync-manual" id="manualSyncBtn" title="手动同步">🔄</button>
+                    <button class="btn-sync-manual" id="manualSyncBtn" title="手动同步">🔄 同步</button>
                     <button class="toggle-collapse-btn" id="toggleCollapseBtn">⬆ 收起</button>
                     <button class="btn-new" id="newSessionBtn">➕</button>
                 </div>
@@ -1143,7 +1113,7 @@
                 <span class="sync-dot" id="syncDot"></span>
                 <span id="syncText">已同步</span>
             </span>
-            💡 DeepSeek-V4-Flash · 自动摘要版
+            💡 DeepSeek-V4-Flash · 手动同步版
             <span class="token-info" id="tokenInfo">📊 上下文: 设定 + 摘要 + 最近6条</span>
         </div>
 
@@ -1159,23 +1129,14 @@
     </div>
 
     <script>
-        // ============================================================
-        //  🎭 默认 System Prompt
-        // ============================================================
         const DEFAULT_SYSTEM_PROMPT = '你是一个沉浸式文字游戏的主持人。请根据用户提供的设定和对话历史，自然地推动剧情发展。';
 
-        // ============================================================
-        //  压缩配置
-        // ============================================================
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 12,
             KEEP_RECENT: 6,
             SUMMARY_MAX_WORDS: 200
         };
 
-        // ============================================================
-        //  全局状态
-        // ============================================================
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
         let sessions = [];
         let currentSessionId = null;
@@ -1186,13 +1147,10 @@
         let isSyncing = false;
         let touchMessageIndex = null;
         let isCompressing = false;
-        let expandedText = null; // 存储扩写结果，待用户确认
+        let expandedText = null;
 
         const COLLECTION_NAME = 'conversations_v9';
 
-        // ============================================================
-        //  DOM 引用
-        // ============================================================
         const apiKeyInput = document.getElementById('apiKeyInput');
         const saveKeyBtn = document.getElementById('saveKeyBtn');
         const chatBox = document.getElementById('chatBox');
@@ -1232,9 +1190,6 @@
         const copySelectedBtn = document.getElementById('copySelectedBtn');
         const newSessionBtn = document.getElementById('newSessionBtn');
 
-        // ============================================================
-        //  Toast
-        // ============================================================
         let toastTimer = null;
 
         function showToast(msg) {
@@ -1246,9 +1201,6 @@
             }, 2500);
         }
 
-        // ============================================================
-        //  工具函数
-        // ============================================================
         function generateId() {
             return Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
         }
@@ -1280,9 +1232,6 @@
             return count;
         }
 
-        // ============================================================
-        //  同步状态UI
-        // ============================================================
         function setSyncStatus(status) {
             syncDot.className = 'sync-dot';
             if (status === 'synced') {
@@ -1305,12 +1254,14 @@
                 syncText.textContent = '离线模式';
                 syncBadge.textContent = '📡 离线';
                 syncBadge.className = 'sync-badge offline';
+            } else if (status === 'manual') {
+                syncDot.className = 'sync-dot';
+                syncText.textContent = '手动同步';
+                syncBadge.textContent = '🔄 手动';
+                syncBadge.className = 'sync-badge';
             }
         }
 
-        // ============================================================
-        //  云端初始化
-        // ============================================================
         const ENV_ID = 'deepseek-chat-d5gg0748z3b9dfe24';
         let cloudApp = null;
         let cloudDb = null;
@@ -1331,8 +1282,8 @@
                 }
                 cloudDb = cloudApp.database();
                 isCloudReady = true;
-                setSyncStatus('synced');
-                console.log('✅ 云端初始化成功');
+                setSyncStatus('manual');
+                console.log('✅ 云端初始化成功（手动同步模式）');
                 return true;
             } catch (e) {
                 console.error('❌ 云端初始化失败:', e);
@@ -1342,13 +1293,9 @@
             }
         }
 
-        // ============================================================
-        //  云端数据操作
-        // ============================================================
         async function loadFromCloud() {
             if (!isCloudReady || !cloudDb) return null;
             try {
-                setSyncStatus('syncing');
                 const res = await cloudDb.collection(COLLECTION_NAME)
                     .orderBy('updateTime', 'desc')
                     .limit(100)
@@ -1368,7 +1315,6 @@
                 return [];
             } catch (e) {
                 console.error('❌ 拉取云端数据失败:', e);
-                setSyncStatus('error');
                 return null;
             }
         }
@@ -1405,7 +1351,7 @@
                         updateTime: session.updateTime || new Date().toISOString()
                     });
                 }
-                setSyncStatus('synced');
+                setSyncStatus('manual');
                 isSyncing = false;
                 return true;
             } catch (e) {
@@ -1416,9 +1362,6 @@
             }
         }
 
-        // ============================================================
-        //  数据管理
-        // ============================================================
         function createSession(name, systemPrompt) {
             return {
                 id: generateId(),
@@ -1470,9 +1413,98 @@
             }
         }
 
-        // ============================================================
-        //  渲染
-        // ============================================================
+        async function manualSync() {
+            if (!isCloudReady) {
+                showToast('云端未连接，尝试初始化...');
+                await initCloud();
+                if (!isCloudReady) {
+                    showToast('❌ 云端连接失败');
+                    return;
+                }
+            }
+
+            showToast('🔄 正在同步...');
+            setSyncStatus('syncing');
+
+            await syncToCloud(sessions);
+
+            const cloudData = await loadFromCloud();
+
+            if (cloudData !== null && cloudData.length > 0) {
+                var mergedSessions = mergeSessions(sessions, cloudData);
+                sessions = mergedSessions;
+
+                if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
+                    currentSessionId = sessions[0].id;
+                }
+                saveSessionsToLocal();
+                renderAll();
+                showToast('✅ 同步完成！');
+                setSyncStatus('manual');
+            } else if (cloudData !== null && cloudData.length === 0) {
+                showToast('✅ 已同步到云端');
+                setSyncStatus('manual');
+            } else {
+                showToast('⚠️ 同步部分完成，拉取数据失败');
+                setSyncStatus('error');
+            }
+        }
+
+        function mergeSessions(localSessions, cloudSessions) {
+            var merged = [];
+            var localMap = {};
+            var cloudMap = {};
+
+            for (var i = 0; i < localSessions.length; i++) {
+                localMap[localSessions[i].id] = localSessions[i];
+            }
+            for (var i = 0; i < cloudSessions.length; i++) {
+                cloudMap[cloudSessions[i].id] = cloudSessions[i];
+            }
+
+            var allIds = new Set();
+            for (var id in localMap) { allIds.add(id); }
+            for (var id in cloudMap) { allIds.add(id); }
+
+            for (var id of allIds) {
+                var local = localMap[id];
+                var cloud = cloudMap[id];
+
+                if (local && cloud) {
+                    var localMsgIds = new Set();
+                    for (var i = 0; i < local.messages.length; i++) {
+                        localMsgIds.add(local.messages[i].timestamp || i);
+                    }
+                    var mergedMsg = local.messages.slice();
+                    for (var i = 0; i < cloud.messages.length; i++) {
+                        var msgId = cloud.messages[i].timestamp || i;
+                        if (!localMsgIds.has(msgId)) {
+                            mergedMsg.push(cloud.messages[i]);
+                        }
+                    }
+                    mergedMsg.sort(function(a, b) {
+                        return (a.timestamp || 0) - (b.timestamp || 0);
+                    });
+
+                    merged.push({
+                        id: local.id,
+                        name: local.name || cloud.name || '新对话',
+                        systemPrompt: local.systemPrompt || cloud.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                        summary: local.summary || cloud.summary || '',
+                        messages: mergedMsg,
+                        createTime: local.createTime || cloud.createTime || new Date().toISOString(),
+                        updateTime: new Date().toISOString()
+                    });
+                } else if (local) {
+                    merged.push(local);
+                } else if (cloud) {
+                    merged.push(cloud);
+                }
+            }
+
+            return merged;
+        }
+
         function renderSessionTabs() {
             sessionBar.innerHTML = '';
             for (var i = 0; i < sessions.length; i++) {
@@ -1598,7 +1630,6 @@
                             actions.appendChild(refreshBtn);
                         }
 
-                        // 扩写按钮 - 用户和 AI 都显示
                         var expandBtn = document.createElement('button');
                         expandBtn.className = 'expand-btn';
                         expandBtn.textContent = '📝 扩写';
@@ -1718,7 +1749,7 @@
             if (enabled) {
                 userInput.focus();
                 statusTip.innerHTML =
-                    '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 DeepSeek-V4-Flash · 自动摘要版 <span class="token-info" id="tokenInfo">📊 设定 + 摘要 + 最近6条</span>';
+                    '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 DeepSeek-V4-Flash · 手动同步版 <span class="token-info" id="tokenInfo">📊 设定 + 摘要 + 最近6条</span>';
             } else {
                 statusTip.innerHTML =
                     '<span class="sync-status"><span class="sync-dot error" id="syncDot"></span><span id="syncText">未登录</span></span> ⏳ 请先输入 API Key';
@@ -1729,15 +1760,11 @@
             }
         }
 
-        // ============================================================
-        //  扩写结果显示在输入框（待用户确认）
-        // ============================================================
         function showExpandedInInput(text) {
             userInput.value = text;
             userInput.focus();
             expandIndicator.classList.add('show');
             expandedText = text;
-            // 调整输入框高度
             userInput.style.height = 'auto';
             userInput.style.height = Math.min(userInput.scrollHeight, 80) + 'px';
             showToast('✏️ 扩写结果已填入输入框，确认后点击发送');
@@ -1748,9 +1775,6 @@
             expandedText = null;
         }
 
-        // ============================================================
-        //  会话操作
-        // ============================================================
         function switchSession(sessionId) {
             if (sessionId === currentSessionId) return;
             exitSelectMode();
@@ -1779,9 +1803,6 @@
             }
             saveSessionsToLocal();
             renderAll();
-            if (isCloudReady) {
-                await syncToCloud(sessions);
-            }
             showToast('已删除');
         }
 
@@ -1793,9 +1814,6 @@
             currentSessionId = s.id;
             saveSessionsToLocal();
             renderAll();
-            if (isCloudReady) {
-                await syncToCloud(sessions);
-            }
             systemPromptInput.value = s.systemPrompt || '';
             renameInput.value = s.name || '';
             if (API_KEY) userInput.focus();
@@ -1811,15 +1829,9 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            if (isCloudReady) {
-                await syncToCloud(sessions);
-            }
             showToast('✅ 已重命名为: ' + trimmed);
         }
 
-        // ============================================================
-        //  设定管理
-        // ============================================================
         async function saveSystemPrompt() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1829,15 +1841,9 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            if (isCloudReady) {
-                await syncToCloud(sessions);
-            }
             showToast('✅ 设定已保存');
         }
 
-        // ============================================================
-        //  🆕 刷新回复功能
-        // ============================================================
         async function refreshMessage(index) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1875,9 +1881,6 @@
             }, 200);
         }
 
-        // ============================================================
-        //  🆕 扩写功能（结果填入输入框，不自动发送）
-        // ============================================================
         async function expandMessage(index) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1896,7 +1899,6 @@
             showToast('📝 正在扩写...');
 
             try {
-                // 精简的扩写指令 - 只扩写言语、动作、心理，不要环境描写
                 var expandPrompt = '请将以下内容扩写，要求：\n' +
                     '1. 只扩写言语、动作、心理活动\n' +
                     '2. 不要增加环境描写、场景填充或无关细节\n' +
@@ -1930,7 +1932,6 @@
 
                 if (data.choices && data.choices[0]) {
                     var expanded = data.choices[0].message.content.trim();
-                    // 填入输入框，等待用户确认
                     showExpandedInInput(expanded);
                 } else {
                     throw new Error('API 返回异常');
@@ -1946,9 +1947,6 @@
             }
         }
 
-        // ============================================================
-        //  🧠 核心：自动压缩总结
-        // ============================================================
         async function generateSummary(showToastMsg) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2030,12 +2028,6 @@
                     renderSummaryOnly();
                     updateTokenInfo();
 
-                    if (isCloudReady) {
-                        syncToCloud(sessions).catch(function(e) {
-                            console.log('后台同步失败:', e);
-                        });
-                    }
-
                     if (showToastMsg !== false) {
                         showToast('✅ 摘要已生成！');
                     }
@@ -2080,16 +2072,12 @@
             }
         }
 
-        // ============================================================
-        //  📤 发送消息
-        // ============================================================
         async function sendMessage(msg, isEdit) {
             if (typeof msg !== 'string') {
                 msg = userInput.value.trim();
             }
             if (!msg) { showToast('请输入消息'); return; }
 
-            // 清除扩写状态
             clearExpandIndicator();
 
             var key = localStorage.getItem('deepseek_api_key');
@@ -2233,9 +2221,6 @@
             }
         }
 
-        // ============================================================
-        //  消息操作
-        // ============================================================
         function deleteMessage(index) {
             var session = getCurrentSession();
             if (!session) return;
@@ -2261,9 +2246,6 @@
             session.summary = '';
             saveSessionsToLocal();
             renderAll();
-            if (isCloudReady) {
-                syncToCloud(sessions).catch(function(e) { console.log('后台同步失败:', e); });
-            }
             showToast('已删除，摘要已重置');
         }
 
@@ -2323,9 +2305,6 @@
                         session.summary = '';
                         saveSessionsToLocal();
                         renderAll();
-                        if (isCloudReady) {
-                            syncToCloud(sessions).catch(function(e) { console.log('后台同步失败:', e); });
-                        }
                         showToast('✅ 已修改，摘要已重置');
 
                         setTimeout(function() {
@@ -2358,9 +2337,6 @@
             }
         }
 
-        // ============================================================
-        //  选择模式
-        // ============================================================
         function exitSelectMode() {
             selectMode = false;
             selectedIndices.clear();
@@ -2430,9 +2406,6 @@
             return text;
         }
 
-        // ============================================================
-        //  复制/导出
-        // ============================================================
         function getAllText() {
             var session = getCurrentSession();
             if (!session) return '';
@@ -2489,9 +2462,6 @@
             document.body.removeChild(textarea);
         }
 
-        // ============================================================
-        //  强制启用输入
-        // ============================================================
         function forceEnableInput() {
             if (userInput) {
                 userInput.disabled = false;
@@ -2506,9 +2476,6 @@
             }
         }
 
-        // ============================================================
-        //  事件绑定
-        // ============================================================
         saveKeyBtn.addEventListener('click', function() {
             var key = apiKeyInput.value.trim();
             if (!key) { showToast('请输入 API Key'); return; }
@@ -2531,9 +2498,6 @@
                 session.updateTime = new Date().toISOString();
                 saveSessionsToLocal();
                 renderAll();
-                if (isCloudReady) {
-                    syncToCloud(sessions).catch(function(e) { console.log('后台同步失败:', e); });
-                }
             }
             showToast('✅ API Key 已保存');
             forceEnableInput();
@@ -2633,9 +2597,7 @@
             copyToClipboard(text || '请先选择消息');
         });
 
-        // 发送按钮 - 发送前清除扩写状态
         sendBtn.addEventListener('click', function() {
-            // 如果有扩写结果在输入框中，清除指示器
             if (expandedText) {
                 clearExpandIndicator();
             }
@@ -2654,7 +2616,6 @@
         userInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 80) + 'px';
-            // 用户手动修改输入框内容时，清除扩写状态
             if (expandedText && this.value !== expandedText) {
                 clearExpandIndicator();
             }
@@ -2662,35 +2623,7 @@
 
         newSessionBtn.addEventListener('click', addNewSession);
 
-        manualSyncBtn.addEventListener('click', async function() {
-            if (!isCloudReady) {
-                showToast('云端未连接，尝试初始化...');
-                await initCloud();
-                if (!isCloudReady) {
-                    showToast('❌ 云端连接失败');
-                    return;
-                }
-            }
-            showToast('🔄 正在同步...');
-            const cloudData = await loadFromCloud();
-            if (cloudData !== null) {
-                if (cloudData.length > 0) {
-                    sessions = cloudData;
-                    if (sessions.length > 0) {
-                        var savedCurrent = localStorage.getItem('deepseek_current_session_v9');
-                        var found = sessions.some(s => s.id === savedCurrent);
-                        currentSessionId = found ? savedCurrent : sessions[0].id;
-                    }
-                } else {
-                    await syncToCloud(sessions);
-                }
-                saveSessionsToLocal();
-                renderAll();
-                showToast('✅ 同步完成');
-            } else {
-                showToast('❌ 同步失败');
-            }
-        });
+        manualSyncBtn.addEventListener('click', manualSync);
 
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.message-wrapper') && !e.target.closest('.msg-actions')) {
@@ -2700,9 +2633,6 @@
             }
         });
 
-        // ============================================================
-        //  🚀 初始化
-        // ============================================================
         async function init() {
             await initCloud();
 
@@ -2726,18 +2656,17 @@
             if (isCloudReady) {
                 const cloudData = await loadFromCloud();
                 if (cloudData !== null && cloudData.length > 0) {
-                    sessions = cloudData;
+                    var mergedSessions = mergeSessions(sessions, cloudData);
+                    sessions = mergedSessions;
                     if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
                         currentSessionId = sessions[0].id;
                     }
                     saveSessionsToLocal();
                     renderAll();
-                } else if (cloudData !== null && cloudData.length === 0) {
-                    await syncToCloud(sessions);
                 }
             }
 
-            console.log('✅ 初始化完成（index9 - 扩写优化版）');
+            console.log('✅ 初始化完成（index9 - 手动同步版）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
         }
@@ -2749,6 +2678,7 @@
         window.forceEnableInput = forceEnableInput;
         window.refreshMessage = refreshMessage;
         window.expandMessage = expandMessage;
+        window.manualSync = manualSync;
         window.COMPRESS_CONFIG = COMPRESS_CONFIG;
     </script>
 </body>
