@@ -7,13 +7,11 @@
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js">
     </script>
     <style>
-        /* ===== 全局重置 ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         html,
         body {
             height: 100%;
@@ -21,8 +19,6 @@
             background: linear-gradient(145deg, #f0f7ff 0%, #e6f0fa 50%, #dce8f5 100%);
             overflow: hidden;
         }
-
-        /* ===== 主容器 ===== */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -39,8 +35,6 @@
             overflow: hidden;
             position: relative;
         }
-
-        /* ===== 顶部固定区域 ===== */
         .header-fixed {
             flex-shrink: 0;
             z-index: 10;
@@ -51,8 +45,6 @@
             padding: 6px 10px 4px 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        /* ===== 标题栏 ===== */
         h1 {
             font-size: 16px;
             color: #ffffff;
@@ -144,7 +136,6 @@
                 opacity: 0.5;
             }
         }
-
         .ds-icon {
             display: inline-flex;
             align-items: center;
@@ -165,7 +156,6 @@
             background-clip: text;
             letter-spacing: 0.5px;
         }
-
         .header-actions {
             display: flex;
             gap: 4px;
@@ -203,8 +193,6 @@
             padding: 3px 8px;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
-
-        /* ===== 折叠区域 ===== */
         .collapsible-section {
             transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
             max-height: 480px;
@@ -240,14 +228,11 @@
         .collapsible-section.collapsed .prompt-section {
             display: none !important;
         }
-
         .collapsed-mode h1 {
             padding: 4px 10px;
             min-height: 34px;
             font-size: 14px;
         }
-
-        /* ===== 控制栏 ===== */
         .api-section {
             display: flex;
             gap: 4px;
@@ -292,7 +277,6 @@
         .api-section button:active {
             transform: scale(0.97);
         }
-
         .control-bar {
             display: flex;
             flex-wrap: wrap;
@@ -368,8 +352,6 @@
         .control-bar .rename-group button:active {
             transform: scale(0.95);
         }
-
-        /* ===== 设定输入区 ===== */
         .prompt-section {
             padding: 4px 0;
             flex-shrink: 0;
@@ -448,8 +430,6 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-
-        /* ===== 摘要显示区 - 可编辑文本框 ===== */
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -471,7 +451,6 @@
             display: block;
             margin-bottom: 2px;
         }
-        /* 摘要文本框 - 可编辑，带滚动 */
         .summary-display textarea {
             width: 100%;
             padding: 6px 8px;
@@ -495,7 +474,6 @@
             box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
             background: rgba(255, 255, 255, 0.8);
         }
-        /* 摘要保存按钮 */
         .summary-display .summary-actions {
             display: flex;
             gap: 4px;
@@ -524,7 +502,6 @@
         .summary-display .summary-actions .btn-summary-cancel:hover {
             background: rgba(0, 0, 0, 0.12);
         }
-
         .share-bar {
             display: flex;
             gap: 3px;
@@ -599,8 +576,6 @@
             border-radius: 6px;
             cursor: pointer;
         }
-
-        /* ===== 会话标签栏 ===== */
         .session-bar {
             display: flex;
             gap: 3px;
@@ -679,8 +654,6 @@
         .btn-add-session:active {
             transform: scale(0.95);
         }
-
-        /* ===== 聊天区域 ===== */
         .chat-scroll-area {
             flex: 1;
             overflow-y: auto;
@@ -698,15 +671,12 @@
             background: rgba(79, 172, 254, 0.3);
             border-radius: 10px;
         }
-
         .chat-box {
             display: flex;
             flex-direction: column;
             gap: 6px;
             min-height: 100%;
         }
-
-        /* ===== 消息样式 ===== */
         .message-wrapper {
             position: relative;
             display: flex;
@@ -719,7 +689,6 @@
         .message-wrapper.user-wrapper {
             align-items: flex-end;
         }
-
         .message-wrapper .msg-actions {
             display: flex;
             gap: 4px;
@@ -772,11 +741,9 @@
         .message-wrapper .msg-actions .expand-btn:hover {
             background: #ede9fe;
         }
-
         .message-wrapper.select-mode .msg-actions {
             display: none !important;
         }
-
         .message-wrapper .msg-checkbox {
             display: none;
             margin-right: 4px;
@@ -796,7 +763,6 @@
         .message-wrapper.select-mode .message {
             flex: 1;
         }
-
         .message {
             max-width: 85%;
             padding: 8px 14px;
@@ -840,7 +806,6 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-bottom-left-radius: 4px;
         }
-
         .message.edit-mode .message-content {
             display: none;
         }
@@ -895,7 +860,6 @@
         .message .edit-actions button:active {
             transform: scale(0.95);
         }
-
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -906,8 +870,6 @@
                 transform: translateY(0) scale(1);
             }
         }
-
-        /* ===== 输入区域 ===== */
         .input-section {
             display: flex;
             gap: 6px;
@@ -984,8 +946,6 @@
         .input-section .expand-indicator.show {
             display: block;
         }
-
-        /* ===== 底部状态 ===== */
         .status-tip {
             text-align: center;
             font-size: 9px;
@@ -1021,8 +981,6 @@
             color: rgba(0, 0, 0, 0.25);
             margin-left: 6px;
         }
-
-        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -1045,8 +1003,6 @@
             opacity: 1;
             transform: translateX(-50%) scale(1);
         }
-
-        /* ===== 响应式 ===== */
         @supports (padding: max(0px)) {
             body {
                 padding-left: max(8px, env(safe-area-inset-left));
@@ -1240,7 +1196,7 @@
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 12,
             KEEP_RECENT: 6,
-            SUMMARY_MAX_WORDS: 2000
+            SUMMARY_MAX_WORDS: 3000
         };
 
         // ============================================================
@@ -1291,7 +1247,6 @@
         const savePromptBtn = document.getElementById('savePromptBtn');
         const manualSummaryBtn = document.getElementById('manualSummaryBtn');
 
-        // 摘要相关 DOM
         const summaryDisplay = document.getElementById('summaryDisplay');
         const summaryTextarea = document.getElementById('summaryTextarea');
         const summarySaveBtn = document.getElementById('summarySaveBtn');
@@ -1647,7 +1602,7 @@
         }
 
         // ============================================================
-        //  摘要渲染（可编辑文本框）
+        //  摘要渲染
         // ============================================================
         function renderSummary() {
             var session = getCurrentSession();
@@ -1660,7 +1615,6 @@
             }
         }
 
-        // 保存摘要（从文本框写入 session）
         function saveSummaryFromTextarea() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1674,7 +1628,6 @@
             summaryCancelBtn.style.display = 'none';
         }
 
-        // 取消编辑（回退到原有内容）
         function cancelSummaryEdit() {
             var session = getCurrentSession();
             if (session) {
@@ -2135,7 +2088,7 @@
         }
 
         // ============================================================
-        //  🧠 核心：自动压缩总结
+        //  🧠 核心：自动压缩总结（方案 B + 3000 字）
         // ============================================================
         async function generateSummary(showToastMsg) {
             var session = getCurrentSession();
@@ -2175,15 +2128,49 @@
                     historyText += label + '：' + historyMessages[i].content + '\n';
                 }
 
-                var compressPrompt = '你是一个专业的剧本摘要助手。请根据以下对话历史，提炼出一份简洁的剧情摘要。\n\n' +
-                    '要求：\n' +
-                    '1. 摘要应包含：当前剧情进展、角色状态、关键事件、重要物品或信息\n' +
-                    '2. 用第三人称叙述，保持客观\n' +
-                    '3. 字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
-                    '4. 只输出摘要内容，不要加任何前缀或说明\n\n' +
+                // ============================================================
+                //  方案 B：清单式多角色摘要模板（3000 字）
+                // ============================================================
+                var compressPrompt = '请根据以下对话历史，生成一份结构清晰的剧情摘要。\n\n' +
+                    '请严格按以下格式输出：\n' +
+                    '【当前时间/地点】\n' +
+                    '【当前目标/任务】\n' +
+                    '\n' +
+                    '--- 关系档案 ---\n' +
+                    '\n' +
+                    '【攻略对象 A：姓名】\n' +
+                    '· 当前关系阶段：\n' +
+                    '· 近期互动记录：（按时间顺序，每条用 10-20 字概括关键动作或对话，多条分行）\n' +
+                    '  - 事件1\n' +
+                    '  - 事件2\n' +
+                    '  - 事件3\n' +
+                    '· 对方当前态度：\n' +
+                    '· 玩家真实感受：\n' +
+                    '\n' +
+                    '【攻略对象 B：姓名】\n' +
+                    '· 当前关系阶段：\n' +
+                    '· 近期互动记录：\n' +
+                    '  - 事件1\n' +
+                    '  - 事件2\n' +
+                    '· 对方当前态度：\n' +
+                    '· 玩家真实感受：\n' +
+                    '\n' +
+                    '（有几个攻略对象就写几个，不要遗漏）\n' +
+                    '\n' +
+                    '--- 全局状态 ---\n' +
+                    '【玩家整体状态】\n' +
+                    '【主要矛盾/压力源】\n' +
+                    '【伏笔/未解决线索】\n' +
+                    '\n' +
+                    '输出要求：\n' +
+                    '1. "近期互动记录"按时间顺序列出，每条用 10-20 字概括关键动作或对话\n' +
+                    '2. 不要遗漏任何一次互动，即使是很小的细节也要记录\n' +
+                    '3. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
+                    '4. 每个攻略对象的条目数根据实际互动次数自动调整\n' +
+                    '5. 只输出以上格式内容，不要加任何前缀或说明\n\n' +
                     '对话历史：\n' + historyText;
 
-                var maxTokens = Math.min(parseInt(maxTokensSlider.value) || 2048, 1024);
+                var maxTokens = Math.min(parseInt(maxTokensSlider.value) || 2048, 4096);
 
                 var response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
@@ -2194,7 +2181,7 @@
                     body: JSON.stringify({
                         model: 'deepseek-v4-flash',
                         messages: [
-                            { role: 'system', content: '你是一个专业的剧本摘要助手。' },
+                            { role: 'system', content: '你是一个专业的剧本摘要助手。严格按照指定的格式输出。' },
                             { role: 'user', content: compressPrompt }
                         ],
                         max_tokens: maxTokens,
@@ -2319,7 +2306,7 @@
                 if (session.summary && session.summary.length > 0) {
                     contextMessages.push({
                         role: 'system',
-                        content: '【当前剧情摘要】' + session.summary + '\n（请基于以上摘要和后续对话继续推进剧情）'
+                        content: '【当前剧情摘要】\n' + session.summary + '\n（请基于以上摘要和后续对话继续推进剧情）'
                     });
                 }
 
@@ -2747,7 +2734,6 @@
             }
         });
 
-        // 摘要保存
         summarySaveBtn.addEventListener('click', saveSummaryFromTextarea);
 
         summaryCancelBtn.addEventListener('click', cancelSummaryEdit);
@@ -2758,7 +2744,6 @@
         });
 
         summaryTextarea.addEventListener('blur', function() {
-            // 延迟隐藏取消按钮，避免点击保存时按钮已消失
             setTimeout(function() {
                 if (!isEditingSummary) {
                     summaryCancelBtn.style.display = 'none';
@@ -2766,7 +2751,6 @@
             }, 200);
         });
 
-        // Ctrl+Enter 保存摘要
         summaryTextarea.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -2907,7 +2891,7 @@
                 }
             }
 
-            console.log('✅ 初始化完成（index9 - 摘要可编辑版）');
+            console.log('✅ 初始化完成（index9 - 方案B + 3000字）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
             console.log('📊 摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
