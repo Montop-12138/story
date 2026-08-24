@@ -7,11 +7,13 @@
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js">
     </script>
     <style>
+        /* ===== 全局重置 ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         html,
         body {
             height: 100%;
@@ -19,6 +21,8 @@
             background: linear-gradient(145deg, #f0f7ff 0%, #e6f0fa 50%, #dce8f5 100%);
             overflow: hidden;
         }
+
+        /* ===== 主容器 ===== */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -28,21 +32,27 @@
             padding: 8px 12px;
             background: rgba(255, 255, 255, 0.35);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 28px;
             border: 1px solid rgba(255, 255, 255, 0.5);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
             overflow: hidden;
             position: relative;
         }
+
+        /* ===== 顶部固定区域 ===== */
         .header-fixed {
             flex-shrink: 0;
             z-index: 10;
             background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-radius: 20px 20px 0 0;
             padding: 6px 10px 4px 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        /* ===== 标题栏 ===== */
         h1 {
             font-size: 16px;
             color: #ffffff;
@@ -134,6 +144,7 @@
                 opacity: 0.5;
             }
         }
+
         .ds-icon {
             display: inline-flex;
             align-items: center;
@@ -154,6 +165,7 @@
             background-clip: text;
             letter-spacing: 0.5px;
         }
+
         .header-actions {
             display: flex;
             gap: 4px;
@@ -191,9 +203,11 @@
             padding: 3px 8px;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
+
+        /* ===== 折叠区域 ===== */
         .collapsible-section {
             transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
-            max-height: 460px;
+            max-height: 480px;
             opacity: 1;
             overflow: hidden;
             margin-bottom: 2px;
@@ -226,11 +240,14 @@
         .collapsible-section.collapsed .prompt-section {
             display: none !important;
         }
+
         .collapsed-mode h1 {
             padding: 4px 10px;
             min-height: 34px;
             font-size: 14px;
         }
+
+        /* ===== 控制栏 ===== */
         .api-section {
             display: flex;
             gap: 4px;
@@ -275,6 +292,7 @@
         .api-section button:active {
             transform: scale(0.97);
         }
+
         .control-bar {
             display: flex;
             flex-wrap: wrap;
@@ -350,6 +368,8 @@
         .control-bar .rename-group button:active {
             transform: scale(0.95);
         }
+
+        /* ===== 设定输入区 ===== */
         .prompt-section {
             padding: 4px 0;
             flex-shrink: 0;
@@ -428,6 +448,8 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* ===== 摘要显示区 - 可编辑文本框 ===== */
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -435,8 +457,6 @@
             font-size: 11px;
             color: rgba(0, 0, 0, 0.6);
             margin-top: 4px;
-            max-height: none;
-            overflow-y: visible;
             border-left: 2px solid rgba(79, 172, 254, 0.2);
             line-height: 1.5;
             display: none;
@@ -448,10 +468,63 @@
             font-weight: 600;
             color: #4facfe;
             font-size: 10px;
+            display: block;
+            margin-bottom: 2px;
         }
-        .summary-display .summary-text {
-            word-break: break-word;
+        /* 摘要文本框 - 可编辑，带滚动 */
+        .summary-display textarea {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: inherit;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            resize: vertical;
+            outline: none;
+            transition: border 0.2s;
+            max-height: 250px;
+            min-height: 60px;
+            overflow-y: auto;
+            color: #1a1a2e;
         }
+        .summary-display textarea:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        /* 摘要保存按钮 */
+        .summary-display .summary-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            justify-content: flex-end;
+        }
+        .summary-display .summary-actions button {
+            padding: 2px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            background: linear-gradient(135deg, #4facfe, #00d4ff);
+            color: white;
+            min-height: 22px;
+        }
+        .summary-display .summary-actions button:active {
+            transform: scale(0.95);
+        }
+        .summary-display .summary-actions .btn-summary-cancel {
+            background: rgba(0, 0, 0, 0.08);
+            color: #555;
+        }
+        .summary-display .summary-actions .btn-summary-cancel:hover {
+            background: rgba(0, 0, 0, 0.12);
+        }
+
         .share-bar {
             display: flex;
             gap: 3px;
@@ -526,6 +599,8 @@
             border-radius: 6px;
             cursor: pointer;
         }
+
+        /* ===== 会话标签栏 ===== */
         .session-bar {
             display: flex;
             gap: 3px;
@@ -604,6 +679,8 @@
         .btn-add-session:active {
             transform: scale(0.95);
         }
+
+        /* ===== 聊天区域 ===== */
         .chat-scroll-area {
             flex: 1;
             overflow-y: auto;
@@ -621,12 +698,15 @@
             background: rgba(79, 172, 254, 0.3);
             border-radius: 10px;
         }
+
         .chat-box {
             display: flex;
             flex-direction: column;
             gap: 6px;
             min-height: 100%;
         }
+
+        /* ===== 消息样式 ===== */
         .message-wrapper {
             position: relative;
             display: flex;
@@ -639,6 +719,7 @@
         .message-wrapper.user-wrapper {
             align-items: flex-end;
         }
+
         .message-wrapper .msg-actions {
             display: flex;
             gap: 4px;
@@ -691,9 +772,11 @@
         .message-wrapper .msg-actions .expand-btn:hover {
             background: #ede9fe;
         }
+
         .message-wrapper.select-mode .msg-actions {
             display: none !important;
         }
+
         .message-wrapper .msg-checkbox {
             display: none;
             margin-right: 4px;
@@ -713,6 +796,7 @@
         .message-wrapper.select-mode .message {
             flex: 1;
         }
+
         .message {
             max-width: 85%;
             padding: 8px 14px;
@@ -756,6 +840,7 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-bottom-left-radius: 4px;
         }
+
         .message.edit-mode .message-content {
             display: none;
         }
@@ -810,6 +895,7 @@
         .message .edit-actions button:active {
             transform: scale(0.95);
         }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -820,6 +906,8 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        /* ===== 输入区域 ===== */
         .input-section {
             display: flex;
             gap: 6px;
@@ -828,6 +916,7 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border-radius: 0 0 20px 20px;
             padding: 8px 4px 4px 4px;
         }
@@ -895,6 +984,8 @@
         .input-section .expand-indicator.show {
             display: block;
         }
+
+        /* ===== 底部状态 ===== */
         .status-tip {
             text-align: center;
             font-size: 9px;
@@ -930,6 +1021,8 @@
             color: rgba(0, 0, 0, 0.25);
             margin-left: 6px;
         }
+
+        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -952,6 +1045,8 @@
             opacity: 1;
             transform: translateX(-50%) scale(1);
         }
+
+        /* ===== 响应式 ===== */
         @supports (padding: max(0px)) {
             body {
                 padding-left: max(8px, env(safe-area-inset-left));
@@ -1018,10 +1113,10 @@
                 padding: 2px 8px;
                 min-height: 18px;
             }
-            .summary-display {
+            .summary-display textarea {
                 font-size: 10px;
-                max-height: 40px;
-                padding: 3px 8px;
+                min-height: 50px;
+                max-height: 180px;
             }
             .message-wrapper .msg-actions button {
                 font-size: 9px;
@@ -1081,9 +1176,14 @@
                             <button class="btn-summary" id="manualSummaryBtn" title="手动触发压缩总结">🧠 总结</button>
                         </div>
                     </div>
+                    <!-- 摘要显示区 - 可编辑 -->
                     <div class="summary-display" id="summaryDisplay">
-                        <span class="summary-label">📌 当前摘要：</span>
-                        <span class="summary-text" id="summaryText">暂无摘要</span>
+                        <span class="summary-label">📌 当前摘要（点击文本框可直接编辑）：</span>
+                        <textarea id="summaryTextarea" rows="3" placeholder="摘要将自动生成，你也可以手动编辑修改"></textarea>
+                        <div class="summary-actions">
+                            <button class="btn-summary-cancel" id="summaryCancelBtn" style="display:none;">取消编辑</button>
+                            <button id="summarySaveBtn">💾 保存摘要</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1129,14 +1229,23 @@
     </div>
 
     <script>
+        // ============================================================
+        //  🎭 默认 System Prompt
+        // ============================================================
         const DEFAULT_SYSTEM_PROMPT = '你是一个沉浸式文字游戏的主持人。请根据用户提供的设定和对话历史，自然地推动剧情发展。';
 
+        // ============================================================
+        //  压缩配置
+        // ============================================================
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 12,
             KEEP_RECENT: 6,
             SUMMARY_MAX_WORDS: 2000
         };
 
+        // ============================================================
+        //  全局状态
+        // ============================================================
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
         let sessions = [];
         let currentSessionId = null;
@@ -1148,9 +1257,13 @@
         let touchMessageIndex = null;
         let isCompressing = false;
         let expandedText = null;
+        let isEditingSummary = false;
 
         const COLLECTION_NAME = 'conversations_v9';
 
+        // ============================================================
+        //  DOM 引用
+        // ============================================================
         const apiKeyInput = document.getElementById('apiKeyInput');
         const saveKeyBtn = document.getElementById('saveKeyBtn');
         const chatBox = document.getElementById('chatBox');
@@ -1177,8 +1290,12 @@
         const systemPromptInput = document.getElementById('systemPromptInput');
         const savePromptBtn = document.getElementById('savePromptBtn');
         const manualSummaryBtn = document.getElementById('manualSummaryBtn');
+
+        // 摘要相关 DOM
         const summaryDisplay = document.getElementById('summaryDisplay');
-        const summaryText = document.getElementById('summaryText');
+        const summaryTextarea = document.getElementById('summaryTextarea');
+        const summarySaveBtn = document.getElementById('summarySaveBtn');
+        const summaryCancelBtn = document.getElementById('summaryCancelBtn');
 
         const copyLastBtn = document.getElementById('copyLastBtn');
         const copyAllBtn = document.getElementById('copyAllBtn');
@@ -1190,6 +1307,9 @@
         const copySelectedBtn = document.getElementById('copySelectedBtn');
         const newSessionBtn = document.getElementById('newSessionBtn');
 
+        // ============================================================
+        //  Toast
+        // ============================================================
         let toastTimer = null;
 
         function showToast(msg) {
@@ -1201,6 +1321,9 @@
             }, 2500);
         }
 
+        // ============================================================
+        //  工具函数
+        // ============================================================
         function generateId() {
             return Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
         }
@@ -1232,6 +1355,9 @@
             return count;
         }
 
+        // ============================================================
+        //  同步状态UI
+        // ============================================================
         function setSyncStatus(status) {
             syncDot.className = 'sync-dot';
             if (status === 'synced') {
@@ -1262,6 +1388,9 @@
             }
         }
 
+        // ============================================================
+        //  云端初始化
+        // ============================================================
         const ENV_ID = 'deepseek-chat-d5gg0748z3b9dfe24';
         let cloudApp = null;
         let cloudDb = null;
@@ -1293,6 +1422,9 @@
             }
         }
 
+        // ============================================================
+        //  云端数据操作
+        // ============================================================
         async function loadFromCloud() {
             if (!isCloudReady || !cloudDb) return null;
             try {
@@ -1362,6 +1494,9 @@
             }
         }
 
+        // ============================================================
+        //  数据管理
+        // ============================================================
         function createSession(name, systemPrompt) {
             return {
                 id: generateId(),
@@ -1413,6 +1548,9 @@
             }
         }
 
+        // ============================================================
+        //  手动同步
+        // ============================================================
         async function manualSync() {
             if (!isCloudReady) {
                 showToast('云端未连接，尝试初始化...');
@@ -1450,6 +1588,9 @@
             }
         }
 
+        // ============================================================
+        //  合并会话
+        // ============================================================
         function mergeSessions(localSessions, cloudSessions) {
             var merged = [];
             var localMap = {};
@@ -1505,6 +1646,48 @@
             return merged;
         }
 
+        // ============================================================
+        //  摘要渲染（可编辑文本框）
+        // ============================================================
+        function renderSummary() {
+            var session = getCurrentSession();
+            if (session && session.summary && session.summary.length > 0) {
+                summaryDisplay.classList.add('has-summary');
+                summaryTextarea.value = session.summary;
+            } else {
+                summaryDisplay.classList.remove('has-summary');
+                summaryTextarea.value = '';
+            }
+        }
+
+        // 保存摘要（从文本框写入 session）
+        function saveSummaryFromTextarea() {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            var newSummary = summaryTextarea.value.trim();
+            session.summary = newSummary;
+            session.updateTime = new Date().toISOString();
+            saveSessionsToLocal();
+            renderAll();
+            showToast('✅ 摘要已保存');
+            isEditingSummary = false;
+            summaryCancelBtn.style.display = 'none';
+        }
+
+        // 取消编辑（回退到原有内容）
+        function cancelSummaryEdit() {
+            var session = getCurrentSession();
+            if (session) {
+                summaryTextarea.value = session.summary || '';
+            }
+            isEditingSummary = false;
+            summaryCancelBtn.style.display = 'none';
+            showToast('已取消编辑');
+        }
+
+        // ============================================================
+        //  渲染
+        // ============================================================
         function renderSessionTabs() {
             sessionBar.innerHTML = '';
             for (var i = 0; i < sessions.length; i++) {
@@ -1702,22 +1885,11 @@
             }, 50);
         }
 
-        function renderSummaryOnly() {
-            var session = getCurrentSession();
-            if (session && session.summary && session.summary.length > 0) {
-                summaryDisplay.classList.add('has-summary');
-                summaryText.textContent = session.summary;
-            } else {
-                summaryDisplay.classList.remove('has-summary');
-                summaryText.textContent = '暂无摘要（对话达到 ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条后自动生成）';
-            }
-        }
-
         function renderAll() {
             var session = getCurrentSession();
             if (session) {
                 systemPromptInput.value = session.systemPrompt || '';
-                renderSummaryOnly();
+                renderSummary();
             }
             renderSessionTabs();
             renderChat();
@@ -1760,6 +1932,9 @@
             }
         }
 
+        // ============================================================
+        //  扩写结果显示在输入框
+        // ============================================================
         function showExpandedInInput(text) {
             userInput.value = text;
             userInput.focus();
@@ -1775,6 +1950,9 @@
             expandedText = null;
         }
 
+        // ============================================================
+        //  会话操作
+        // ============================================================
         function switchSession(sessionId) {
             if (sessionId === currentSessionId) return;
             exitSelectMode();
@@ -1832,6 +2010,9 @@
             showToast('✅ 已重命名为: ' + trimmed);
         }
 
+        // ============================================================
+        //  设定管理
+        // ============================================================
         async function saveSystemPrompt() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1844,6 +2025,9 @@
             showToast('✅ 设定已保存');
         }
 
+        // ============================================================
+        //  刷新回复
+        // ============================================================
         async function refreshMessage(index) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1881,6 +2065,9 @@
             }, 200);
         }
 
+        // ============================================================
+        //  扩写功能
+        // ============================================================
         async function expandMessage(index) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1947,6 +2134,9 @@
             }
         }
 
+        // ============================================================
+        //  🧠 核心：自动压缩总结
+        // ============================================================
         async function generateSummary(showToastMsg) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2025,7 +2215,7 @@
                     session.updateTime = new Date().toISOString();
 
                     saveSessionsToLocal();
-                    renderSummaryOnly();
+                    renderSummary();
                     updateTokenInfo();
 
                     if (showToastMsg !== false) {
@@ -2048,6 +2238,9 @@
             }
         }
 
+        // ============================================================
+        //  自动压缩检查
+        // ============================================================
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
@@ -2072,6 +2265,9 @@
             }
         }
 
+        // ============================================================
+        //  📤 发送消息
+        // ============================================================
         async function sendMessage(msg, isEdit) {
             if (typeof msg !== 'string') {
                 msg = userInput.value.trim();
@@ -2221,6 +2417,9 @@
             }
         }
 
+        // ============================================================
+        //  消息操作
+        // ============================================================
         function deleteMessage(index) {
             var session = getCurrentSession();
             if (!session) return;
@@ -2337,6 +2536,9 @@
             }
         }
 
+        // ============================================================
+        //  选择模式
+        // ============================================================
         function exitSelectMode() {
             selectMode = false;
             selectedIndices.clear();
@@ -2406,6 +2608,9 @@
             return text;
         }
 
+        // ============================================================
+        //  复制/导出
+        // ============================================================
         function getAllText() {
             var session = getCurrentSession();
             if (!session) return '';
@@ -2462,6 +2667,9 @@
             document.body.removeChild(textarea);
         }
 
+        // ============================================================
+        //  强制启用输入
+        // ============================================================
         function forceEnableInput() {
             if (userInput) {
                 userInput.disabled = false;
@@ -2476,6 +2684,9 @@
             }
         }
 
+        // ============================================================
+        //  事件绑定
+        // ============================================================
         saveKeyBtn.addEventListener('click', function() {
             var key = apiKeyInput.value.trim();
             if (!key) { showToast('请输入 API Key'); return; }
@@ -2533,6 +2744,33 @@
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 saveSystemPrompt();
+            }
+        });
+
+        // 摘要保存
+        summarySaveBtn.addEventListener('click', saveSummaryFromTextarea);
+
+        summaryCancelBtn.addEventListener('click', cancelSummaryEdit);
+
+        summaryTextarea.addEventListener('focus', function() {
+            isEditingSummary = true;
+            summaryCancelBtn.style.display = 'inline-block';
+        });
+
+        summaryTextarea.addEventListener('blur', function() {
+            // 延迟隐藏取消按钮，避免点击保存时按钮已消失
+            setTimeout(function() {
+                if (!isEditingSummary) {
+                    summaryCancelBtn.style.display = 'none';
+                }
+            }, 200);
+        });
+
+        // Ctrl+Enter 保存摘要
+        summaryTextarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                saveSummaryFromTextarea();
             }
         });
 
@@ -2633,6 +2871,9 @@
             }
         });
 
+        // ============================================================
+        //  🚀 初始化
+        // ============================================================
         async function init() {
             await initCloud();
 
@@ -2666,9 +2907,10 @@
                 }
             }
 
-            console.log('✅ 初始化完成（index9 - 手动同步版）');
+            console.log('✅ 初始化完成（index9 - 摘要可编辑版）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
+            console.log('📊 摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
         }
 
         init();
