@@ -233,8 +233,6 @@
             min-height: 34px;
             font-size: 14px;
         }
-
-        /* ===== API 区域 ===== */
         .api-section {
             display: flex;
             gap: 4px;
@@ -297,7 +295,6 @@
         .api-section button:active {
             transform: scale(0.97);
         }
-
         .control-bar {
             display: flex;
             flex-wrap: wrap;
@@ -373,7 +370,6 @@
         .control-bar .rename-group button:active {
             transform: scale(0.95);
         }
-
         .prompt-section {
             padding: 4px 0;
             flex-shrink: 0;
@@ -456,7 +452,6 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-
         .fixed-module {
             margin-top: 4px;
             padding: 4px 10px;
@@ -516,7 +511,6 @@
         .fixed-module .fixed-actions button:active {
             transform: scale(0.95);
         }
-
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -589,7 +583,6 @@
         .summary-display .summary-actions .btn-summary-cancel:hover {
             background: rgba(0, 0, 0, 0.12);
         }
-
         .share-bar {
             display: flex;
             gap: 3px;
@@ -664,7 +657,6 @@
             border-radius: 6px;
             cursor: pointer;
         }
-
         .session-bar {
             display: flex;
             gap: 3px;
@@ -743,7 +735,6 @@
         .btn-add-session:active {
             transform: scale(0.95);
         }
-
         .chat-scroll-area {
             flex: 1;
             overflow-y: auto;
@@ -767,7 +758,6 @@
             gap: 6px;
             min-height: 100%;
         }
-
         .message-wrapper {
             position: relative;
             display: flex;
@@ -854,7 +844,6 @@
         .message-wrapper.select-mode .message {
             flex: 1;
         }
-
         .message {
             max-width: 85%;
             padding: 8px 14px;
@@ -952,7 +941,6 @@
         .message .edit-actions button:active {
             transform: scale(0.95);
         }
-
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -963,7 +951,6 @@
                 transform: translateY(0) scale(1);
             }
         }
-
         .input-section {
             display: flex;
             gap: 6px;
@@ -1040,7 +1027,6 @@
         .input-section .expand-indicator.show {
             display: block;
         }
-
         .status-tip {
             text-align: center;
             font-size: 9px;
@@ -1076,7 +1062,6 @@
             color: rgba(0, 0, 0, 0.25);
             margin-left: 6px;
         }
-
         .toast {
             position: fixed;
             bottom: 100px;
@@ -1099,7 +1084,6 @@
             opacity: 1;
             transform: translateX(-50%) scale(1);
         }
-
         @supports (padding: max(0px)) {
             body {
                 padding-left: max(8px, env(safe-area-inset-left));
@@ -1210,7 +1194,6 @@
 
             <div class="collapsible-section" id="collapsibleSection">
 
-                <!-- ===== API 区域 ===== -->
                 <div class="api-section">
                     <select id="modelSelect">
                         <option value="deepseek-v4-flash">DeepSeek-V4-Flash</option>
@@ -1250,7 +1233,6 @@
                         </div>
                     </div>
 
-                    <!-- 固定模块 -->
                     <div class="fixed-module" id="fixedModule">
                         <span class="fixed-label">📌 固定模块（AI 不会改动，请手动编辑）</span>
                         <textarea id="fixedContent" rows="3" placeholder="【核心情感纽带与人设】&#10;（写清楚角色关系基调、核心矛盾、性格定位）&#10;&#10;【重要约定】&#10;· 按时间顺序列出重要约定"></textarea>
@@ -1259,7 +1241,6 @@
                         </div>
                     </div>
 
-                    <!-- 动态摘要 -->
                     <div class="summary-display" id="summaryDisplay">
                         <span class="summary-label">📌 动态摘要（AI 自动生成，包含事件标记和近期动态）</span>
                         <textarea id="summaryTextarea" rows="3" placeholder="动态摘要将自动生成，你也可以手动编辑修改"></textarea>
@@ -1297,7 +1278,7 @@
                 <span id="syncText">已同步</span>
             </span>
             💡 多模型切换 · 文游引擎
-            <span class="token-info" id="tokenInfo">📊 固定模块 + 动态摘要 + 最近8条</span>
+            <span class="token-info" id="tokenInfo">📊 固定模块 + 动态摘要 + 最近16条</span>
         </div>
 
         <div class="input-section">
@@ -1312,15 +1293,9 @@
     </div>
 
     <script>
-        // ============================================================
-        //  默认 System Prompt
-        // ============================================================
         const DEFAULT_SYSTEM_PROMPT =
             '你是一个沉浸式文字游戏的主持人。请根据用户提供的设定和对话历史，自然地推动剧情发展。每次回复控制在 500 字以内，不要超过。';
 
-        // ============================================================
-        //  模型配置表
-        // ============================================================
         const MODEL_CONFIG = {
             'deepseek-v4-flash': {
                 url: 'https://api.deepseek.com/chat/completions',
@@ -1349,18 +1324,12 @@
             }
         };
 
-        // ============================================================
-        //  压缩配置
-        // ============================================================
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 40,
             KEEP_RECENT: 16,
             SUMMARY_MAX_WORDS: 1200
         };
 
-        // ============================================================
-        //  全局状态
-        // ============================================================
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
         let sessions = [];
         let currentSessionId = null;
@@ -1373,12 +1342,10 @@
         let isCompressing = false;
         let expandedText = null;
         let isEditingSummary = false;
+        let lastCompressCount = 0;
 
         const COLLECTION_NAME = 'conversations_v9';
 
-        // ============================================================
-        //  DOM 引用
-        // ============================================================
         const apiKeyInput = document.getElementById('apiKeyInput');
         const modelSelect = document.getElementById('modelSelect');
         const saveKeyBtn = document.getElementById('saveKeyBtn');
@@ -1427,9 +1394,6 @@
         const copySelectedBtn = document.getElementById('copySelectedBtn');
         const newSessionBtn = document.getElementById('newSessionBtn');
 
-        // ============================================================
-        //  Toast
-        // ============================================================
         let toastTimer = null;
 
         function showToast(msg) {
@@ -1441,9 +1405,6 @@
             }, 2500);
         }
 
-        // ============================================================
-        //  工具函数
-        // ============================================================
         function generateId() {
             return Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
         }
@@ -1480,9 +1441,6 @@
             return MODEL_CONFIG[model] || MODEL_CONFIG['deepseek-v4-flash'];
         }
 
-        // ============================================================
-        //  同步状态UI
-        // ============================================================
         function setSyncStatus(status) {
             syncDot.className = 'sync-dot';
             if (status === 'synced') {
@@ -1513,9 +1471,6 @@
             }
         }
 
-        // ============================================================
-        //  云端初始化
-        // ============================================================
         const ENV_ID = 'deepseek-chat-d5gg0748z3b9dfe24';
         let cloudApp = null;
         let cloudDb = null;
@@ -1547,9 +1502,6 @@
             }
         }
 
-        // ============================================================
-        //  云端数据操作
-        // ============================================================
         async function loadFromCloud() {
             if (!isCloudReady || !cloudDb) return null;
             try {
@@ -1621,9 +1573,6 @@
             }
         }
 
-        // ============================================================
-        //  数据管理
-        // ============================================================
         function createSession(name, systemPrompt) {
             return {
                 id: generateId(),
@@ -1642,6 +1591,7 @@
             if (currentSessionId) {
                 localStorage.setItem('deepseek_current_session_v9', currentSessionId);
             }
+            lastCompressCount = parseInt(localStorage.getItem('lastCompressCount_v9')) || 0;
         }
 
         function loadSessionsFromLocal() {
@@ -1677,11 +1627,10 @@
             } else {
                 currentSessionId = sessions[0].id;
             }
+
+            lastCompressCount = parseInt(localStorage.getItem('lastCompressCount_v9')) || 0;
         }
 
-        // ============================================================
-        //  手动同步
-        // ============================================================
         async function manualSync() {
             if (!isCloudReady) {
                 showToast('云端未连接，尝试初始化...');
@@ -1719,9 +1668,6 @@
             }
         }
 
-        // ============================================================
-        //  合并会话
-        // ============================================================
         function mergeSessions(localSessions, cloudSessions) {
             var merged = [];
             var localMap = {};
@@ -1778,9 +1724,6 @@
             return merged;
         }
 
-        // ============================================================
-        //  渲染
-        // ============================================================
         function renderFixedModule() {
             var session = getCurrentSession();
             if (session && session.fixedContent && session.fixedContent.length > 0) {
@@ -2069,7 +2012,7 @@
             if (enabled) {
                 userInput.focus();
                 statusTip.innerHTML =
-                    '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 多模型切换 · 文游引擎 <span class="token-info" id="tokenInfo">📊 固定模块 + 动态摘要 + 最近8条</span>';
+                    '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 多模型切换 · 文游引擎 <span class="token-info" id="tokenInfo">📊 固定模块 + 动态摘要 + 最近16条</span>';
             } else {
                 statusTip.innerHTML =
                     '<span class="sync-status"><span class="sync-dot error" id="syncDot"></span><span id="syncText">未登录</span></span> ⏳ 请先输入 API Key';
@@ -2080,9 +2023,6 @@
             }
         }
 
-        // ============================================================
-        //  扩写结果显示在输入框
-        // ============================================================
         function showExpandedInInput(text) {
             userInput.value = text;
             userInput.focus();
@@ -2098,9 +2038,6 @@
             expandedText = null;
         }
 
-        // ============================================================
-        //  会话操作
-        // ============================================================
         function switchSession(sessionId) {
             if (sessionId === currentSessionId) return;
             exitSelectMode();
@@ -2158,9 +2095,6 @@
             showToast('✅ 已重命名为: ' + trimmed);
         }
 
-        // ============================================================
-        //  设定管理
-        // ============================================================
         async function saveSystemPrompt() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2173,9 +2107,6 @@
             showToast('✅ 设定已保存');
         }
 
-        // ============================================================
-        //  刷新回复
-        // ============================================================
         async function refreshMessage(index) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2213,9 +2144,6 @@
             }, 200);
         }
 
-        // ============================================================
-        //  扩写功能
-        // ============================================================
         async function expandMessage(index) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2282,9 +2210,6 @@
             }
         }
 
-        // ============================================================
-        //  🧠 核心：摘要生成
-        // ============================================================
         async function generateSummary(mode, showToastMsg) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2389,6 +2314,11 @@
                     session.summary = summary;
                     session.updateTime = new Date().toISOString();
 
+                    // 更新 lastCompressCount
+                    var msgCount = countUserAssistantMessages(session.messages);
+                    lastCompressCount = msgCount;
+                    localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+
                     saveSessionsToLocal();
                     renderSummary();
                     updateTokenInfo();
@@ -2415,25 +2345,42 @@
         }
 
         // ============================================================
-        //  自动压缩检查
+        //  修复后的自动压缩检查
         // ============================================================
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
 
             var msgCount = countUserAssistantMessages(session.messages);
-            var hasSummary = session.summary && session.summary.length > 0;
 
-            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && !hasSummary) {
-                console.log('🔄 触发自动压缩（增量模式），消息数: ' + msgCount);
+            // 首次触发：消息数 >= TRIGGER_COUNT 且 从未触发过
+            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && lastCompressCount === 0) {
+                console.log('🔄 首次触发自动压缩，消息数: ' + msgCount);
+                lastCompressCount = msgCount;
+                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
                 setTimeout(function() {
                     generateSummary('incremental', false);
                 }, 500);
                 return;
             }
 
-            if (hasSummary && msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT + COMPRESS_CONFIG.KEEP_RECENT) {
-                console.log('🔄 触发摘要更新（增量模式），消息数: ' + msgCount);
+            // 后续触发：距离上次触发已增加 KEEP_RECENT 条消息
+            if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.KEEP_RECENT) {
+                console.log('🔄 触发摘要更新（增量模式），消息数: ' + msgCount + '，距上次触发: ' + (msgCount - lastCompressCount) +
+                    ' 条');
+                lastCompressCount = msgCount;
+                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                setTimeout(function() {
+                    generateSummary('incremental', false);
+                }, 500);
+                return;
+            }
+
+            // 如果摘要为空但消息数已超过阈值，强制触发一次
+            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && (!session.summary || session.summary.length === 0)) {
+                console.log('🔄 摘要为空，强制触发压缩，消息数: ' + msgCount);
+                lastCompressCount = msgCount;
+                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
                 setTimeout(function() {
                     generateSummary('incremental', false);
                 }, 500);
@@ -2441,9 +2388,6 @@
             }
         }
 
-        // ============================================================
-        //  📤 发送消息
-        // ============================================================
         async function sendMessage(msg, isEdit) {
             if (typeof msg !== 'string') {
                 msg = userInput.value.trim();
@@ -2571,6 +2515,7 @@
                     saveSessionsToLocal();
                     renderAll();
 
+                    // 每次发送消息后检查是否需要压缩
                     checkAndCompress();
 
                 } else {
@@ -2605,9 +2550,6 @@
             }
         }
 
-        // ============================================================
-        //  消息操作
-        // ============================================================
         function deleteMessage(index) {
             var session = getCurrentSession();
             if (!session) return;
@@ -2631,6 +2573,8 @@
             session.messages.splice(index, deleteCount);
             session.updateTime = new Date().toISOString();
             session.summary = '';
+            lastCompressCount = 0;
+            localStorage.setItem('lastCompressCount_v9', '0');
             saveSessionsToLocal();
             renderAll();
             showToast('已删除，动态摘要已重置');
@@ -2690,6 +2634,8 @@
 
                         session.updateTime = new Date().toISOString();
                         session.summary = '';
+                        lastCompressCount = 0;
+                        localStorage.setItem('lastCompressCount_v9', '0');
                         saveSessionsToLocal();
                         renderAll();
                         showToast('✅ 已修改，动态摘要已重置');
@@ -2724,9 +2670,6 @@
             }
         }
 
-        // ============================================================
-        //  选择模式
-        // ============================================================
         function exitSelectMode() {
             selectMode = false;
             selectedIndices.clear();
@@ -2796,9 +2739,6 @@
             return text;
         }
 
-        // ============================================================
-        //  复制/导出
-        // ============================================================
         function getAllText() {
             var session = getCurrentSession();
             if (!session) return '';
@@ -2872,9 +2812,6 @@
             }
         }
 
-        // ============================================================
-        //  模型切换事件
-        // ============================================================
         modelSelect.addEventListener('change', function() {
             var model = this.value;
             var config = MODEL_CONFIG[model];
@@ -2893,9 +2830,6 @@
             }
         });
 
-        // ============================================================
-        //  事件绑定
-        // ============================================================
         saveKeyBtn.addEventListener('click', function() {
             var model = modelSelect.value;
             var config = MODEL_CONFIG[model];
@@ -2903,7 +2837,6 @@
             var key = apiKeyInput.value.trim();
             if (!key) { showToast('请输入 API Key'); return; }
             if (!key.startsWith('sk-') && !key.startsWith('sk')) {
-                // 千问的 Key 可能不以 sk- 开头，所以放宽检查
                 if (key.length < 10) {
                     showToast('请输入有效的 API Key');
                     return;
@@ -3103,9 +3036,10 @@
             }
         });
 
-        // ============================================================
-        //  🚀 初始化
-        // ============================================================
+        modelSelect.addEventListener('change', function() {
+            localStorage.setItem('selected_model', this.value);
+        });
+
         async function init() {
             await initCloud();
 
@@ -3115,13 +3049,11 @@
                 currentSessionId = sessions[0].id;
             }
 
-            // 恢复上次选择的模型
             var savedModel = localStorage.getItem('selected_model') || 'deepseek-v4-flash';
             if (MODEL_CONFIG[savedModel]) {
                 modelSelect.value = savedModel;
             }
 
-            // 加载当前模型的 API Key
             var config = MODEL_CONFIG[modelSelect.value];
             if (config) {
                 var savedKey = localStorage.getItem(config.keyStorage) || '';
@@ -3151,17 +3083,12 @@
                 }
             }
 
-            console.log('✅ 初始化完成（文游节拍器 V10 - 多模型版）');
+            console.log('✅ 初始化完成（文游节拍器 V10 - 修复触发频率版）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
             console.log('📊 动态摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
             console.log('🎵 当前模型: ' + modelSelect.value);
         }
-
-        // 保存当前选择的模型
-        modelSelect.addEventListener('change', function() {
-            localStorage.setItem('selected_model', this.value);
-        });
 
         init();
 
