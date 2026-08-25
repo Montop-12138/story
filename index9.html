@@ -435,16 +435,13 @@
             cursor: not-allowed;
         }
 
-        /* ===== 固定模块编辑区 ===== */
+        /* 固定模块 - 默认显示（已修复） */
         .fixed-module {
             margin-top: 4px;
             padding: 4px 10px;
             background: rgba(16, 185, 129, 0.06);
             border-radius: 8px;
             border-left: 2px solid rgba(16, 185, 129, 0.3);
-            display: block;
-        }
-        .fixed-module.has-fixed {
             display: block;
         }
         .fixed-module .fixed-label {
@@ -499,7 +496,7 @@
             transform: scale(0.95);
         }
 
-        /* ===== 动态摘要显示区 ===== */
+        /* 动态摘要显示区 */
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -1257,7 +1254,7 @@
                 <span id="syncText">已同步</span>
             </span>
             💡 DeepSeek-V4-Flash · 固定模块分离版
-            <span class="token-info" id="tokenInfo">📊 上下文: 设定 + 固定模块 + 动态摘要 + 最近8条</span>
+            <span class="token-info" id="tokenInfo">📊 上下文: 固定模块 + 动态摘要 + 最近8条</span>
         </div>
 
         <div class="input-section">
@@ -1284,7 +1281,7 @@
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 24,
             KEEP_RECENT: 8,
-            SUMMARY_MAX_WORDS: 1500
+            SUMMARY_MAX_WORDS: 1200
         };
 
         // ============================================================
@@ -1707,10 +1704,8 @@
         function renderFixedModule() {
             var session = getCurrentSession();
             if (session && session.fixedContent && session.fixedContent.length > 0) {
-                fixedModule.classList.add('has-fixed');
                 fixedContent.value = session.fixedContent;
             } else {
-                fixedModule.classList.remove('has-fixed');
                 fixedContent.value = '';
             }
         }
@@ -2208,7 +2203,7 @@
         }
 
         // ============================================================
-        //  🧠 核心：摘要生成（仅生成动态部分）
+        //  🧠 核心：摘要生成（仅生成动态部分 - 极简版）
         // ============================================================
         async function generateSummary(mode, showToastMsg) {
             var session = getCurrentSession();
@@ -2246,7 +2241,6 @@
 
             try {
                 var oldSummary = session.summary || '';
-                var fixedContent = session.fixedContent || '';
                 var historyText = '';
                 for (var i = 0; i < historyMessages.length; i++) {
                     var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
@@ -2256,32 +2250,33 @@
                 var compressPrompt = '';
 
                 if (mode === 'full') {
-                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下全部对话历史，生成动态摘要。\n\n' +
-                        '注意：固定模块（核心情感纽带与人设、重要约定）已由用户手动维护，你不需要生成这两部分。\n\n' +
+                    // ===== 全量整理：极简版 =====
+                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下全部对话历史，生成极简动态摘要。\n\n' +
                         '【全部对话历史】：\n' + historyText + '\n\n' +
-                        '请按以下格式输出动态摘要：\n\n' +
-                        '【关键事件标记】（按时间顺序列出所有关键事件，每条一句话）\n' +
-                        '· 无\n\n' +
-                        '【近期动态】（最近几轮对话的主旨提炼，2-3 句话概括最近发生的事）\n' +
-                        '（用 2-3 句话概括最近发生的事）\n\n' +
+                        '请按以下格式输出：\n\n' +
+                        '## 关键事件标记\n' +
+                        '- 用 1-2 条概括整段剧情核心推进，每条 ≤ 15 字，只写“谁 + 做了什么”\n' +
+                        '- 合并同类事件，不要按对话轮次展开\n\n' +
+                        '## 近期动态\n' +
+                        '用 1-2 句话提炼剧情走向和关系变化，≤ 100 字\n' +
+                        '结尾留一个未落定的状态（如“尚未明确回应”）\n\n' +
                         '要求：\n' +
-                        '1. 只输出【关键事件标记】和【近期动态】两部分\n' +
-                        '2. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
-                        '3. 只输出以上格式内容，不要加任何前缀或说明';
+                        '1. 关键事件标记每条 ≤ 15 字，合并同类项\n' +
+                        '2. 近期动态 ≤ 100 字\n' +
+                        '3. 只输出以上格式，不要任何前缀或说明';
                 } else {
+                    // ===== 增量更新：极简版 =====
                     var oldSummaryText = oldSummary || '（暂无旧动态摘要）';
-                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧动态摘要和新对话，更新动态摘要。\n\n' +
-                        '注意：固定模块（核心情感纽带与人设、重要约定）已由用户手动维护，你只需要更新动态部分。\n\n' +
+                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧动态摘要和新对话，更新极简动态摘要。\n\n' +
                         '【旧动态摘要】（已有的动态内容，请保留所有事件）：\n' + oldSummaryText + '\n\n' +
                         '【新对话】（最近发生的事件）：\n' + historyText + '\n\n' +
                         '请按以下规则更新：\n' +
-                        '1. 【关键事件标记】：保留旧的所有事件，只追加新事件\n' +
-                        '2. 【近期动态】：用最新对话更新这部分内容\n' +
-                        '3. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
-                        '4. 只输出更新后的动态摘要，不要加任何前缀或说明';
+                        '1. 【关键事件标记】：保留旧事件，只追加新事件，每条 ≤ 15 字\n' +
+                        '2. 【近期动态】：用 ≤ 100 字概括最新剧情走向，结尾留未落定状态\n' +
+                        '3. 只输出更新后的动态摘要，不要加任何前缀或说明';
                 }
 
-                var maxTokens = 4096;
+                var maxTokens = 2048;
 
                 var response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
@@ -2292,11 +2287,11 @@
                     body: JSON.stringify({
                         model: 'deepseek-v4-flash',
                         messages: [
-                            { role: 'system', content: '你是专业的剧本摘要助手。只生成动态摘要，不涉及固定模块。' },
+                            { role: 'system', content: '你是专业的剧本摘要助手。只生成极简动态摘要。' },
                             { role: 'user', content: compressPrompt }
                         ],
                         max_tokens: maxTokens,
-                        temperature: 0.5
+                        temperature: 0.4
                     })
                 });
 
@@ -2355,7 +2350,7 @@
                 return;
             }
 
-            if (hasSummary && msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT + 8) {
+            if (hasSummary && msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT + COMPRESS_CONFIG.KEEP_RECENT) {
                 console.log('🔄 触发摘要更新（增量模式），消息数: ' + msgCount);
                 setTimeout(function() {
                     generateSummary('incremental', false);
@@ -3030,7 +3025,7 @@
                 }
             }
 
-            console.log('✅ 初始化完成（固定模块分离版 - 全量/增量双模式）');
+            console.log('✅ 初始化完成（固定模块分离版 - 极简摘要）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
             console.log('📊 动态摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
