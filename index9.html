@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeepSeek 智能助手 · 结构化摘要版</title>
+    <title>DeepSeek 智能助手 · 固定模块分离版</title>
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js">
     </script>
     <style>
@@ -195,7 +195,7 @@
         }
         .collapsible-section {
             transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
-            max-height: 520px;
+            max-height: 580px;
             opacity: 1;
             overflow: hidden;
             margin-bottom: 2px;
@@ -434,6 +434,72 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* ===== 固定模块编辑区 ===== */
+        .fixed-module {
+            margin-top: 4px;
+            padding: 4px 10px;
+            background: rgba(16, 185, 129, 0.06);
+            border-radius: 8px;
+            border-left: 2px solid rgba(16, 185, 129, 0.3);
+            display: none;
+        }
+        .fixed-module.has-fixed {
+            display: block;
+        }
+        .fixed-module .fixed-label {
+            font-weight: 600;
+            color: #10b981;
+            font-size: 10px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .fixed-module textarea {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: inherit;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            resize: vertical;
+            outline: none;
+            transition: border 0.2s;
+            max-height: 120px;
+            min-height: 40px;
+            overflow-y: auto;
+            color: #1a1a2e;
+        }
+        .fixed-module textarea:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .fixed-module .fixed-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            justify-content: flex-end;
+        }
+        .fixed-module .fixed-actions button {
+            padding: 2px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            min-height: 22px;
+        }
+        .fixed-module .fixed-actions button:active {
+            transform: scale(0.95);
+        }
+
+        /* ===== 动态摘要显示区 ===== */
         .summary-display {
             padding: 4px 10px;
             background: rgba(79, 172, 254, 0.06);
@@ -506,6 +572,7 @@
         .summary-display .summary-actions .btn-summary-cancel:hover {
             background: rgba(0, 0, 0, 0.12);
         }
+
         .share-bar {
             display: flex;
             gap: 3px;
@@ -1073,6 +1140,11 @@
                 padding: 2px 8px;
                 min-height: 18px;
             }
+            .fixed-module textarea {
+                font-size: 10px;
+                max-height: 80px;
+                min-height: 30px;
+            }
             .summary-display textarea {
                 font-size: 10px;
                 min-height: 50px;
@@ -1133,16 +1205,27 @@
                         <textarea id="systemPromptInput" rows="2" placeholder="输入你的世界观、角色、规则设定..."></textarea>
                         <div class="prompt-actions">
                             <button id="savePromptBtn">保存设定</button>
-                            <button class="btn-full" id="fullSummaryBtn" title="重读全部对话，重新生成完整结构化摘要">🧠 全量整理</button>
+                            <button class="btn-full" id="fullSummaryBtn" title="重读全部对话，重新生成完整动态摘要">🧠 全量整理</button>
                             <button class="btn-incremental" id="incrementalSummaryBtn" title="基于旧摘要追加新内容，费用更低">📌 增量更新</button>
                         </div>
                     </div>
+
+                    <!-- 固定模块：核心情感纽带与人设 + 重要约定（手动编辑） -->
+                    <div class="fixed-module" id="fixedModule">
+                        <span class="fixed-label">📌 固定模块（AI 不会改动，请手动编辑）</span>
+                        <textarea id="fixedContent" rows="3" placeholder="【核心情感纽带与人设】&#10;（写清楚角色关系基调、核心矛盾、性格定位）&#10;&#10;【重要约定】&#10;· 按时间顺序列出重要约定"></textarea>
+                        <div class="fixed-actions">
+                            <button id="fixedSaveBtn">💾 保存固定模块</button>
+                        </div>
+                    </div>
+
+                    <!-- 动态摘要 -->
                     <div class="summary-display" id="summaryDisplay">
-                        <span class="summary-label">📌 当前摘要（点击文本框可直接编辑）：</span>
-                        <textarea id="summaryTextarea" rows="3" placeholder="摘要将自动生成，你也可以手动编辑修改"></textarea>
+                        <span class="summary-label">📌 动态摘要（AI 自动生成，包含事件标记和近期动态）</span>
+                        <textarea id="summaryTextarea" rows="3" placeholder="动态摘要将自动生成，你也可以手动编辑修改"></textarea>
                         <div class="summary-actions">
                             <button class="btn-summary-cancel" id="summaryCancelBtn" style="display:none;">取消编辑</button>
-                            <button id="summarySaveBtn">💾 保存摘要</button>
+                            <button id="summarySaveBtn">💾 保存动态摘要</button>
                         </div>
                     </div>
                 </div>
@@ -1173,8 +1256,8 @@
                 <span class="sync-dot" id="syncDot"></span>
                 <span id="syncText">已同步</span>
             </span>
-            💡 DeepSeek-V4-Flash · 结构化摘要版
-            <span class="token-info" id="tokenInfo">📊 上下文: 设定 + 摘要 + 最近6条</span>
+            💡 DeepSeek-V4-Flash · 固定模块分离版
+            <span class="token-info" id="tokenInfo">📊 上下文: 设定 + 固定模块 + 动态摘要 + 最近8条</span>
         </div>
 
         <div class="input-section">
@@ -1252,6 +1335,10 @@
         const savePromptBtn = document.getElementById('savePromptBtn');
         const fullSummaryBtn = document.getElementById('fullSummaryBtn');
         const incrementalSummaryBtn = document.getElementById('incrementalSummaryBtn');
+
+        const fixedModule = document.getElementById('fixedModule');
+        const fixedContent = document.getElementById('fixedContent');
+        const fixedSaveBtn = document.getElementById('fixedSaveBtn');
 
         const summaryDisplay = document.getElementById('summaryDisplay');
         const summaryTextarea = document.getElementById('summaryTextarea');
@@ -1398,6 +1485,7 @@
                         id: item.id,
                         name: item.name || '新对话',
                         systemPrompt: item.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                        fixedContent: item.fixedContent || '',
                         summary: item.summary || '',
                         messages: item.messages || [],
                         createTime: item.createTime || new Date().toISOString(),
@@ -1438,6 +1526,7 @@
                         id: session.id,
                         name: session.name || '新对话',
                         systemPrompt: session.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                        fixedContent: session.fixedContent || '',
                         summary: session.summary || '',
                         messages: session.messages || [],
                         createTime: session.createTime || new Date().toISOString(),
@@ -1463,6 +1552,7 @@
                 id: generateId(),
                 name: name || '新对话',
                 systemPrompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                fixedContent: '',
                 summary: '',
                 messages: [],
                 createTime: new Date().toISOString(),
@@ -1486,6 +1576,9 @@
             for (var i = 0; i < sessions.length; i++) {
                 if (!sessions[i].systemPrompt) {
                     sessions[i].systemPrompt = DEFAULT_SYSTEM_PROMPT;
+                }
+                if (sessions[i].fixedContent === undefined) {
+                    sessions[i].fixedContent = '';
                 }
                 if (sessions[i].summary === undefined) {
                     sessions[i].summary = '';
@@ -1592,6 +1685,7 @@
                         id: local.id,
                         name: local.name || cloud.name || '新对话',
                         systemPrompt: local.systemPrompt || cloud.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                        fixedContent: local.fixedContent || cloud.fixedContent || '',
                         summary: local.summary || cloud.summary || '',
                         messages: mergedMsg,
                         createTime: local.createTime || cloud.createTime || new Date().toISOString(),
@@ -1608,8 +1702,19 @@
         }
 
         // ============================================================
-        //  摘要渲染
+        //  渲染
         // ============================================================
+        function renderFixedModule() {
+            var session = getCurrentSession();
+            if (session && session.fixedContent && session.fixedContent.length > 0) {
+                fixedModule.classList.add('has-fixed');
+                fixedContent.value = session.fixedContent;
+            } else {
+                fixedModule.classList.remove('has-fixed');
+                fixedContent.value = '';
+            }
+        }
+
         function renderSummary() {
             var session = getCurrentSession();
             if (session && session.summary && session.summary.length > 0) {
@@ -1621,6 +1726,17 @@
             }
         }
 
+        function saveFixedContent() {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            var content = fixedContent.value.trim();
+            session.fixedContent = content;
+            session.updateTime = new Date().toISOString();
+            saveSessionsToLocal();
+            renderAll();
+            showToast('✅ 固定模块已保存');
+        }
+
         function saveSummaryFromTextarea() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -1629,7 +1745,7 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            showToast('✅ 摘要已保存');
+            showToast('✅ 动态摘要已保存');
             isEditingSummary = false;
             summaryCancelBtn.style.display = 'none';
         }
@@ -1644,9 +1760,6 @@
             showToast('已取消编辑');
         }
 
-        // ============================================================
-        //  渲染
-        // ============================================================
         function renderSessionTabs() {
             sessionBar.innerHTML = '';
             for (var i = 0; i < sessions.length; i++) {
@@ -1848,6 +1961,7 @@
             var session = getCurrentSession();
             if (session) {
                 systemPromptInput.value = session.systemPrompt || '';
+                renderFixedModule();
                 renderSummary();
             }
             renderSessionTabs();
@@ -1865,7 +1979,7 @@
                 var msgCount = countUserAssistantMessages(session.messages);
                 var hasSummary = session.summary && session.summary.length > 0;
                 if (msgCount > COMPRESS_CONFIG.TRIGGER_COUNT && hasSummary) {
-                    tokenInfo.textContent = '📊 已压缩 | 摘要 + 最近' + COMPRESS_CONFIG.KEEP_RECENT + '条';
+                    tokenInfo.textContent = '📊 已压缩 | 固定模块 + 动态摘要 + 最近' + COMPRESS_CONFIG.KEEP_RECENT + '条';
                 } else if (msgCount > 0) {
                     tokenInfo.textContent = '📊 ' + msgCount + '条消息 | 未压缩';
                 } else {
@@ -1880,7 +1994,7 @@
             if (enabled) {
                 userInput.focus();
                 statusTip.innerHTML =
-                    '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 DeepSeek-V4-Flash · 结构化摘要版 <span class="token-info" id="tokenInfo">📊 设定 + 摘要 + 最近6条</span>';
+                    '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 DeepSeek-V4-Flash · 固定模块分离版 <span class="token-info" id="tokenInfo">📊 固定模块 + 动态摘要 + 最近8条</span>';
             } else {
                 statusTip.innerHTML =
                     '<span class="sync-status"><span class="sync-dot error" id="syncDot"></span><span id="syncText">未登录</span></span> ⏳ 请先输入 API Key';
@@ -2094,7 +2208,7 @@
         }
 
         // ============================================================
-        //  🧠 核心：摘要生成（支持全量和增量两种模式）
+        //  🧠 核心：摘要生成（仅生成动态部分）
         // ============================================================
         async function generateSummary(mode, showToastMsg) {
             var session = getCurrentSession();
@@ -2103,7 +2217,6 @@
             var key = localStorage.getItem('deepseek_api_key');
             if (!key) { showToast('请先保存 API Key'); return; }
 
-            // 收集所有 user/assistant 消息
             var historyMessages = [];
             for (var i = 0; i < session.messages.length; i++) {
                 var m = session.messages[i];
@@ -2128,11 +2241,12 @@
 
             var modeLabel = mode === 'full' ? '全量整理' : '增量更新';
             if (showToastMsg !== false) {
-                showToast('🧠 正在生成' + modeLabel + '摘要...');
+                showToast('🧠 正在生成' + modeLabel + '动态摘要...');
             }
 
             try {
                 var oldSummary = session.summary || '';
+                var fixedContent = session.fixedContent || '';
                 var historyText = '';
                 for (var i = 0; i < historyMessages.length; i++) {
                     var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
@@ -2142,43 +2256,32 @@
                 var compressPrompt = '';
 
                 if (mode === 'full') {
-                    // ===== 全量整理模式：重读全部对话，重新生成完整结构化摘要 =====
-                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下全部对话历史，生成一份完整的结构化剧情摘要。\n\n' +
-                        '【全部对话历史】：\n' +
-                        historyText + '\n\n' +
-                        '请按以下格式输出：\n\n' +
-                        '【核心情感纽带与人设】（角色之间的关系基调、核心矛盾、性格定位）\n' +
-                        '（用 2-3 句话概括）\n\n' +
-                        '【重要约定】（按时间顺序列出所有重要约定）\n' +
-                        '· 无\n\n' +
+                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下全部对话历史，生成动态摘要。\n\n' +
+                        '注意：固定模块（核心情感纽带与人设、重要约定）已由用户手动维护，你不需要生成这两部分。\n\n' +
+                        '【全部对话历史】：\n' + historyText + '\n\n' +
+                        '请按以下格式输出动态摘要：\n\n' +
                         '【关键事件标记】（按时间顺序列出所有关键事件，每条一句话）\n' +
                         '· 无\n\n' +
-                        '【近期动态】（最近几轮对话的主旨提炼，2-3 句话）\n' +
+                        '【近期动态】（最近几轮对话的主旨提炼，2-3 句话概括最近发生的事）\n' +
                         '（用 2-3 句话概括最近发生的事）\n\n' +
                         '要求：\n' +
-                        '1. 按时间顺序整理所有事件\n' +
-                        '2. 重要约定和关键事件标记只列事实，不添加评价\n' +
-                        '3. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
-                        '4. 只输出以上格式内容，不要加任何前缀或说明';
+                        '1. 只输出【关键事件标记】和【近期动态】两部分\n' +
+                        '2. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
+                        '3. 只输出以上格式内容，不要加任何前缀或说明';
                 } else {
-                    // ===== 增量更新模式：保留旧摘要，只追加新内容 =====
-                    var oldSummaryText = oldSummary || '（暂无旧摘要，将首次生成）';
-                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧摘要和新对话，更新结构化摘要。\n\n' +
-                        '【旧摘要】（已有的结构化内容，请保留所有信息）：\n' +
-                        oldSummaryText + '\n\n' +
-                        '【新对话】（最近发生的事件）：\n' +
-                        historyText + '\n\n' +
+                    var oldSummaryText = oldSummary || '（暂无旧动态摘要）';
+                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧动态摘要和新对话，更新动态摘要。\n\n' +
+                        '注意：固定模块（核心情感纽带与人设、重要约定）已由用户手动维护，你只需要更新动态部分。\n\n' +
+                        '【旧动态摘要】（已有的动态内容，请保留所有事件）：\n' + oldSummaryText + '\n\n' +
+                        '【新对话】（最近发生的事件）：\n' + historyText + '\n\n' +
                         '请按以下规则更新：\n' +
-                        '1. 【核心情感纽带与人设】：保留旧摘要内容，除非有重大变化才修改\n' +
-                        '2. 【重要约定】：保留旧的所有约定，只追加新约定\n' +
-                        '3. 【关键事件标记】：保留旧的所有事件，只追加新事件\n' +
-                        '4. 【近期动态】：用最新对话更新这部分内容\n' +
-                        '5. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
-                        '6. 只输出更新后的完整摘要，不要加任何前缀或说明';
+                        '1. 【关键事件标记】：保留旧的所有事件，只追加新事件\n' +
+                        '2. 【近期动态】：用最新对话更新这部分内容\n' +
+                        '3. 总字数控制在 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字以内\n' +
+                        '4. 只输出更新后的动态摘要，不要加任何前缀或说明';
                 }
 
-                // 摘要专用：固定 8192 Tokens
-                var maxTokens = 8192;
+                var maxTokens = 4096;
 
                 var response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
@@ -2189,7 +2292,7 @@
                     body: JSON.stringify({
                         model: 'deepseek-v4-flash',
                         messages: [
-                            { role: 'system', content: '你是专业的剧本摘要助手。' },
+                            { role: 'system', content: '你是专业的剧本摘要助手。只生成动态摘要，不涉及固定模块。' },
                             { role: 'user', content: compressPrompt }
                         ],
                         max_tokens: maxTokens,
@@ -2214,14 +2317,14 @@
                     updateTokenInfo();
 
                     if (showToastMsg !== false) {
-                        showToast('✅ ' + modeLabel + '摘要已生成！');
+                        showToast('✅ ' + modeLabel + '动态摘要已生成！');
                     }
                 } else {
                     throw new Error('API 返回异常');
                 }
 
             } catch (error) {
-                var errorText = '❌ 生成' + modeLabel + '摘要失败: ' + error.message;
+                var errorText = '❌ 生成' + modeLabel + '动态摘要失败: ' + error.message;
                 if (error.message.includes('401') || error.message.includes('403')) {
                     errorText = '❌ API Key 无效，请重新输入';
                 }
@@ -2312,10 +2415,19 @@
                 var systemPrompt = session.systemPrompt || DEFAULT_SYSTEM_PROMPT;
                 contextMessages.push({ role: 'system', content: systemPrompt });
 
+                // 固定模块（用户手动维护）
+                if (session.fixedContent && session.fixedContent.length > 0) {
+                    contextMessages.push({
+                        role: 'system',
+                        content: '【固定设定（请始终遵循）】\n' + session.fixedContent
+                    });
+                }
+
+                // 动态摘要
                 if (session.summary && session.summary.length > 0) {
                     contextMessages.push({
                         role: 'system',
-                        content: '【当前剧情摘要】\n' + session.summary + '\n（请基于以上摘要和后续对话继续推进剧情）'
+                        content: '【当前剧情动态】\n' + session.summary + '\n（请基于以上内容继续推进）'
                     });
                 }
 
@@ -2339,8 +2451,9 @@
                     });
                 }
 
-                console.log('📤 上下文构建: 设定=' + (systemPrompt.length) + '字, 摘要=' + (session.summary ? session.summary
-                    .length : 0) + '字, 消息数=' + msgsToSend.length);
+                console.log('📤 上下文构建: 设定=' + (systemPrompt.length) + '字, 固定模块=' + (session.fixedContent ? session
+                    .fixedContent.length : 0) + '字, 动态摘要=' + (session.summary ? session.summary.length : 0) + '字, 消息数=' +
+                    msgsToSend.length);
 
                 var response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
@@ -2441,7 +2554,7 @@
             session.summary = '';
             saveSessionsToLocal();
             renderAll();
-            showToast('已删除，摘要已重置');
+            showToast('已删除，动态摘要已重置');
         }
 
         function startEditMessage(index) {
@@ -2500,7 +2613,7 @@
                         session.summary = '';
                         saveSessionsToLocal();
                         renderAll();
-                        showToast('✅ 已修改，摘要已重置');
+                        showToast('✅ 已修改，动态摘要已重置');
 
                         setTimeout(function() {
                             sendMessage(newContent, true);
@@ -2612,8 +2725,11 @@
             if (!session) return '';
             var text = '📝 ' + session.name + '\n';
             text += '📜 设定: ' + session.systemPrompt + '\n';
+            if (session.fixedContent) {
+                text += '📌 固定模块: ' + session.fixedContent + '\n';
+            }
             if (session.summary) {
-                text += '📌 摘要: ' + session.summary + '\n';
+                text += '📌 动态摘要: ' + session.summary + '\n';
             }
             text += '='.repeat(40) + '\n\n';
             for (var i = 0; i < session.messages.length; i++) {
@@ -2722,6 +2838,8 @@
 
         savePromptBtn.addEventListener('click', saveSystemPrompt);
 
+        fixedSaveBtn.addEventListener('click', saveFixedContent);
+
         fullSummaryBtn.addEventListener('click', function() {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2742,7 +2860,7 @@
                 return;
             }
             if (!session.summary || session.summary.length === 0) {
-                showToast('尚无旧摘要，请先使用「全量整理」');
+                showToast('尚无动态摘要，请先使用「全量整理」');
                 return;
             }
             generateSummary('incremental', true);
@@ -2912,10 +3030,10 @@
                 }
             }
 
-            console.log('✅ 初始化完成（结构化摘要版 - 全量/增量双模式）');
+            console.log('✅ 初始化完成（固定模块分离版 - 全量/增量双模式）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
-            console.log('📊 摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
+            console.log('📊 动态摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
         }
 
         init();
