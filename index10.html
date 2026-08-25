@@ -1201,6 +1201,7 @@
                         <option value="qwen-flash-character">Qwen-Flash-Character</option>
                         <option value="qwen-plus">Qwen-Plus</option>
                         <option value="qwen-max">Qwen-Max</option>
+                        <option value="qwen3.7-flash">Qwen3.7-Flash</option>
                     </select>
                     <input type="password" id="apiKeyInput" placeholder="输入 API Key" />
                     <button id="saveKeyBtn">保存</button>
@@ -1321,6 +1322,11 @@
                 url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
                 keyStorage: 'qwen_max_key',
                 defaultKey: localStorage.getItem('qwen_max_key') || ''
+            },
+            'qwen3.7-flash': {
+                url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+                keyStorage: 'qwen3_7_flash_key',
+                defaultKey: localStorage.getItem('qwen3_7_flash_key') || ''
             }
         };
 
@@ -2314,7 +2320,6 @@
                     session.summary = summary;
                     session.updateTime = new Date().toISOString();
 
-                    // 更新 lastCompressCount
                     var msgCount = countUserAssistantMessages(session.messages);
                     lastCompressCount = msgCount;
                     localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
@@ -2344,16 +2349,12 @@
             }
         }
 
-        // ============================================================
-        //  修复后的自动压缩检查
-        // ============================================================
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
 
             var msgCount = countUserAssistantMessages(session.messages);
 
-            // 首次触发：消息数 >= TRIGGER_COUNT 且 从未触发过
             if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && lastCompressCount === 0) {
                 console.log('🔄 首次触发自动压缩，消息数: ' + msgCount);
                 lastCompressCount = msgCount;
@@ -2364,7 +2365,6 @@
                 return;
             }
 
-            // 后续触发：距离上次触发已增加 KEEP_RECENT 条消息
             if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.KEEP_RECENT) {
                 console.log('🔄 触发摘要更新（增量模式），消息数: ' + msgCount + '，距上次触发: ' + (msgCount - lastCompressCount) +
                     ' 条');
@@ -2376,7 +2376,6 @@
                 return;
             }
 
-            // 如果摘要为空但消息数已超过阈值，强制触发一次
             if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && (!session.summary || session.summary.length === 0)) {
                 console.log('🔄 摘要为空，强制触发压缩，消息数: ' + msgCount);
                 lastCompressCount = msgCount;
@@ -2515,7 +2514,6 @@
                     saveSessionsToLocal();
                     renderAll();
 
-                    // 每次发送消息后检查是否需要压缩
                     checkAndCompress();
 
                 } else {
@@ -3083,7 +3081,7 @@
                 }
             }
 
-            console.log('✅ 初始化完成（文游节拍器 V10 - 修复触发频率版）');
+            console.log('✅ 初始化完成（文游节拍器 V10 - qwen3.7-flash 已添加）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
             console.log('📊 动态摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
