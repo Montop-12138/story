@@ -679,10 +679,9 @@
                 if (/DataInspectionFailed|content.?filter|sensitive|illegal|risky|risk.?control|审核|敏感|拦截|安全|forbidden/i.test(text)) {
                     return true;
                 }
-                if (res && res.ok && (!data.choices || data.choices.length === 0 ||
-                        data.choices[0].finish_reason === 'content_filter')) {
-                    return true;
-                }
+                var choices = getChoices(data);
+                if (res && res.ok && choices && choices.length === 0) return true;
+                if (res && res.ok && choices && choices[0] && choices[0].finish_reason === 'content_filter') return true;
                 return false;
             }
 
@@ -727,6 +726,29 @@
                 saveChat();
                 renderChat();
                 toast(text);
+            }
+
+            function getChoices(data) {
+                if (!data) return null;
+                if (Array.isArray(data.choices)) return data.choices;
+                if (data.data && Array.isArray(data.data.choices)) return data.data.choices;
+                return null;
+            }
+
+            function extractReplyContent(choice) {
+                if (!choice || !choice.message) return '';
+                var c = choice.message.content;
+                if (typeof c === 'string') return c.trim();
+                if (Array.isArray(c)) {
+                    var parts = [];
+                    for (var i = 0; i < c.length; i++) {
+                        var p = c[i];
+                        if (p && typeof p.text === 'string') parts.push(p.text);
+                    }
+                    return parts.join('').trim();
+                }
+                if (c && typeof c === 'object' && typeof c.text === 'string') return c.text.trim();
+                return '';
             }
 
             function sendMessage(content, isResend) {
@@ -775,10 +797,19 @@
                         return;
                     }
                     if (!r.res.ok) throw new Error(apiErrorMessage(r.data, r.res.status));
-                    var reply = r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message ?
-                        r.data.choices[0].message.content : null;
-                    if (!reply || !reply.trim()) throw new Error('API 返回异常，请重试');
-                    chat.messages.push({ role: 'assistant', content: reply.trim(), ts: Date.now() });
+                    if (r.data && r.data.error) throw new Error(apiErrorMessage(r.data, 200));
+                    var chatChoices = getChoices(r.data);
+                    if (!chatChoices || chatChoices.length === 0) {
+                        throw new Error('API 返回结构异常：未找到对话内容（choices）');
+                    }
+                    var reply = extractReplyContent(chatChoices[0]);
+                    if (!reply) {
+                        var finishReason = chatChoices[0].finish_reason || '';
+                        var emptyHint = finishReason === 'length' ? '（回复被截断）' :
+                            (finishReason === 'content_filter' ? '（内容被服务端过滤）' : '');
+                        throw new Error('模型返回内容为空' + emptyHint + '，请重试或切换模型');
+                    }
+                    chat.messages.push({ role: 'assistant', content: reply, ts: Date.now() });
                     saveChat();
                     renderChat();
                     maybeCompress();
@@ -857,10 +888,11 @@
                 }).then(function(r) {
                     if (chat.updatedAt !== token) return;
                     if (!r.res.ok) throw new Error(apiErrorMessage(r.data, r.res.status));
-                    var summary = r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message ?
-                        r.data.choices[0].message.content : null;
-                    if (!summary || !summary.trim()) throw new Error('摘要生成异常');
-                    chat.summary = summary.trim();
+                    if (r.data && r.data.error) throw new Error(apiErrorMessage(r.data, 200));
+                    var sumChoices = getChoices(r.data);
+                    var summary = sumChoices && sumChoices[0] ? extractReplyContent(sumChoices[0]) : '';
+                    if (!summary) throw new Error('摘要生成异常：返回内容为空');
+                    chat.summary = summary;
                     chat.lastCompressedCount = validMessages().length;
                     saveChat();
                     renderChat();
