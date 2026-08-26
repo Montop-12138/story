@@ -1092,6 +1092,7 @@
                 padding-bottom: max(8px, env(safe-area-inset-bottom));
             }
         }
+        /* ============ 移动端优化 (新增/增强) ============ */
         @media (max-width: 480px) {
             .app-container {
                 padding: 4px 6px;
@@ -1168,6 +1169,59 @@
             .message-wrapper .msg-actions button {
                 font-size: 9px;
                 padding: 1px 6px;
+            }
+
+            /* ===== 输入区纵向布局，增大按钮 ===== */
+            .input-section {
+                flex-direction: column;
+                gap: 6px;
+                padding: 8px 4px 6px;
+            }
+            .input-section textarea {
+                width: 100%;
+                min-height: 44px;
+                font-size: 15px;
+            }
+            .input-section .send-btn-container {
+                width: 100%;
+                flex-direction: row;
+                justify-content: flex-end;
+                gap: 6px;
+                align-items: center;
+            }
+            .input-section .send-btn-container button {
+                height: 48px;
+                font-size: 16px;
+                padding: 8px 24px;
+                flex: 1;
+            }
+            .input-section .expand-indicator {
+                font-size: 11px;
+                padding: 4px 12px;
+                white-space: normal;
+                flex: 0 1 auto;
+            }
+            /* 其他按钮尺寸微调 */
+            .header-actions button {
+                font-size: 10px;
+                padding: 2px 8px;
+                min-height: 28px;
+            }
+            .control-bar .rename-group input {
+                min-height: 30px;
+                font-size: 12px;
+            }
+            .control-bar .rename-group button {
+                min-height: 30px;
+                font-size: 11px;
+            }
+            .session-tab {
+                font-size: 10px;
+                padding: 4px 10px;
+            }
+            .btn-add-session {
+                font-size: 10px;
+                padding: 4px 10px;
             }
         }
     </style>
@@ -1337,6 +1391,10 @@
             SUMMARY_MAX_WORDS: 1200,
             SUMMARY_SEND_MAX: 600
         };
+
+        // ===== 新增：冷却时间（5分钟） =====
+        let LAST_COMPRESS_TIME = 0;
+        const COMPRESS_COOLDOWN = 300000; // 5分钟
 
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
         let sessions = [];
@@ -1547,29 +1605,48 @@
             }
         }
 
+        // ========== 【B】 重写 syncToCloud：先拉取云端，合并，再全量写回 ==========
         async function syncToCloud(sessionsData) {
             if (!isCloudReady || !cloudDb) return false;
             if (isSyncing) return false;
             try {
                 isSyncing = true;
                 setSyncStatus('syncing');
-                const collection = cloudDb.collection(COLLECTION_NAME);
-                const existing = await collection.limit(100).get();
-                var existingData = [];
-                if (existing && existing.data && Array.isArray(existing.data)) {
-                    existingData = existing.data;
+
+                // 1. 拉取云端现有数据
+                let cloudSessions = [];
+                const res = await cloudDb.collection(COLLECTION_NAME)
+                    .orderBy('updateTime', 'desc')
+                    .limit(100)
+                    .get();
+                if (res.data && res.data.length > 0) {
+                    cloudSessions = res.data.map(item => ({
+                        id: item.id,
+                        name: item.name || '新对话',
+                        systemPrompt: item.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                        fixedContent: item.fixedContent || '',
+                        summary: item.summary || '',
+                        messages: item.messages || [],
+                        createTime: item.createTime || new Date().toISOString(),
+                        updateTime: item.updateTime || new Date().toISOString(),
+                        _cloudId: item._id
+                    }));
                 }
-                for (const item of existingData) {
-                    try {
-                        if (item._id) {
-                            await collection.doc(item._id).remove();
-                        }
-                    } catch (e) {
-                        console.warn('删除旧数据失败:', e);
+
+                // 2. 合并本地和云端
+                const merged = mergeSessions(sessionsData, cloudSessions);
+
+                // 3. 删除云端所有旧数据
+                const existing = await cloudDb.collection(COLLECTION_NAME).limit(100).get();
+                for (const item of existing.data) {
+                    if (item._id) {
+                        await cloudDb.collection(COLLECTION_NAME).doc(item._id).remove();
                     }
                 }
-                for (const session of sessionsData) {
-                    await collection.add({
+
+                // 4. 写入合并后的数据
+                for (const session of merged) {
+                    await cloudDb.collection(COLLECTION_NAME).add({
                         id: session.id,
                         name: session.name || '新对话',
                         systemPrompt: session.systemPrompt || DEFAULT_SYSTEM_PROMPT,
@@ -1580,28 +1657,19 @@
                         updateTime: session.updateTime || new Date().toISOString()
                     });
                 }
+
+                // 5. 更新本地 sessions 为 merged，并保存
+                sessions = merged;
+                saveSessionsToLocal();
                 setSyncStatus('manual');
                 isSyncing = false;
                 return true;
             } catch (e) {
-                console.error('❌ 同步到云端失败:', e);
+                console.error('❌ 同步失败:', e);
                 setSyncStatus('error');
                 isSyncing = false;
                 return false;
             }
-        }
-
-        function createSession(name, systemPrompt) {
-            return {
-                id: generateId(),
-                name: name || '新对话',
-                systemPrompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
-                fixedContent: '',
-                summary: '',
-                messages: [],
-                createTime: new Date().toISOString(),
-                updateTime: new Date().toISOString()
-            };
         }
 
         function saveSessionsToLocal() {
@@ -1658,31 +1726,14 @@
                     return;
                 }
             }
-
             showToast('🔄 正在同步...');
             setSyncStatus('syncing');
-
-            await syncToCloud(sessions);
-
-            const cloudData = await loadFromCloud();
-
-            if (cloudData !== null && cloudData.length > 0) {
-                var mergedSessions = mergeSessions(sessions, cloudData);
-                sessions = mergedSessions;
-
-                if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
-                    currentSessionId = sessions[0].id;
-                }
-                saveSessionsToLocal();
+            const success = await syncToCloud(sessions);
+            if (success) {
                 renderAll();
                 showToast('✅ 同步完成！');
-                setSyncStatus('manual');
-            } else if (cloudData !== null && cloudData.length === 0) {
-                showToast('✅ 已同步到云端');
-                setSyncStatus('manual');
             } else {
-                showToast('⚠️ 同步部分完成，拉取数据失败');
-                setSyncStatus('error');
+                showToast('⚠️ 同步失败');
             }
         }
 
@@ -2228,6 +2279,7 @@
             }
         }
 
+        // ========== 【C】 generateSummary 中更新冷却时间 ==========
         async function generateSummary(mode, showToastMsg) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2337,6 +2389,9 @@
                     lastCompressCount = msgCount;
                     localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
 
+                    // 更新冷却时间
+                    LAST_COMPRESS_TIME = Date.now();
+
                     saveSessionsToLocal();
                     renderSummary();
                     updateTokenInfo();
@@ -2362,16 +2417,25 @@
             }
         }
 
+        // ========== 【C】 checkAndCompress 增加冷却检查 ==========
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
 
             var msgCount = countUserAssistantMessages(session.messages);
 
+            // 检查冷却
+            var now = Date.now();
+            if (now - LAST_COMPRESS_TIME < COMPRESS_COOLDOWN) {
+                console.log('⏳ 摘要生成冷却中，距上次触发 ' + ((now - LAST_COMPRESS_TIME) / 1000) + ' 秒，跳过自动压缩');
+                return;
+            }
+
             if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && lastCompressCount === 0) {
                 console.log('🔄 首次触发自动压缩，消息数: ' + msgCount);
                 lastCompressCount = msgCount;
                 localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                LAST_COMPRESS_TIME = now;
                 setTimeout(function() {
                     generateSummary('incremental', false);
                 }, 500);
@@ -2383,6 +2447,7 @@
                     ' 条');
                 lastCompressCount = msgCount;
                 localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                LAST_COMPRESS_TIME = now;
                 setTimeout(function() {
                     generateSummary('incremental', false);
                 }, 500);
@@ -2393,6 +2458,7 @@
                 console.log('🔄 摘要为空，强制触发压缩，消息数: ' + msgCount);
                 lastCompressCount = msgCount;
                 localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                LAST_COMPRESS_TIME = now;
                 setTimeout(function() {
                     generateSummary('incremental', false);
                 }, 500);
@@ -3095,10 +3161,11 @@
                 }
             }
 
-            console.log('✅ 初始化完成（文游节拍器 V10 - qwen3.7-flash 已添加）');
+            console.log('✅ 初始化完成（文游节拍器 V10 - 优化同步+冷却+移动端）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
             console.log('📊 动态摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
+            console.log('⏳ 摘要冷却时间: ' + (COMPRESS_COOLDOWN / 60000) + ' 分钟');
             console.log('🎵 当前模型: ' + modelSelect.value);
         }
 
