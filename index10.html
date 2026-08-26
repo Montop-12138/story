@@ -1092,7 +1092,7 @@
                 padding-bottom: max(8px, env(safe-area-inset-bottom));
             }
         }
-        /* ============ 移动端优化 (新增/增强) ============ */
+        /* ============ 移动端优化 ============ */
         @media (max-width: 480px) {
             .app-container {
                 padding: 4px 6px;
@@ -1171,7 +1171,6 @@
                 padding: 1px 6px;
             }
 
-            /* ===== 输入区纵向布局，增大按钮 ===== */
             .input-section {
                 flex-direction: column;
                 gap: 6px;
@@ -1201,7 +1200,6 @@
                 white-space: normal;
                 flex: 0 1 auto;
             }
-            /* 其他按钮尺寸微调 */
             .header-actions button {
                 font-size: 10px;
                 padding: 2px 8px;
@@ -1392,9 +1390,9 @@
             SUMMARY_SEND_MAX: 600
         };
 
-        // ===== 新增：冷却时间（5分钟） =====
+        // 冷却时间（5分钟）
         let LAST_COMPRESS_TIME = 0;
-        const COMPRESS_COOLDOWN = 300000; // 5分钟
+        const COMPRESS_COOLDOWN = 300000;
 
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
         let sessions = [];
@@ -1605,7 +1603,7 @@
             }
         }
 
-        // ========== 【B】 重写 syncToCloud：先拉取云端，合并，再全量写回 ==========
+        // ===== 修复版：syncToCloud（只增不删，本地优先） =====
         async function syncToCloud(sessionsData) {
             if (!isCloudReady || !cloudDb) return false;
             if (isSyncing) return false;
@@ -1613,12 +1611,12 @@
                 isSyncing = true;
                 setSyncStatus('syncing');
 
-                // 1. 拉取云端现有数据
-                let cloudSessions = [];
+                // 1. 拉取云端所有会话
                 const res = await cloudDb.collection(COLLECTION_NAME)
                     .orderBy('updateTime', 'desc')
                     .limit(100)
                     .get();
+                let cloudSessions = [];
                 if (res.data && res.data.length > 0) {
                     cloudSessions = res.data.map(item => ({
                         id: item.id,
@@ -1633,10 +1631,40 @@
                     }));
                 }
 
-                // 2. 合并本地和云端
-                const merged = mergeSessions(sessionsData, cloudSessions);
+                // 2. 构建本地会话 Map
+                const localMap = {};
+                for (const s of sessionsData) {
+                    localMap[s.id] = s;
+                }
 
-                // 3. 删除云端所有旧数据
+                // 3. 合并云端会话到本地（只增不删）
+                for (const cloudSess of cloudSessions) {
+                    const localSess = localMap[cloudSess.id];
+                    if (!localSess) {
+                        // 本地没有，直接加入
+                        sessionsData.push(cloudSess);
+                        localMap[cloudSess.id] = cloudSess;
+                    } else {
+                        // 本地已有，合并消息（以本地消息为主，补充云端中时间戳不同的消息）
+                        const localMsgIds = new Set();
+                        for (const msg of localSess.messages) {
+                            localMsgIds.add(msg.timestamp || msg._id || Math.random().toString(36));
+                        }
+                        for (const msg of cloudSess.messages) {
+                            const msgId = msg.timestamp || msg._id || Math.random().toString(36);
+                            if (!localMsgIds.has(msgId)) {
+                                localSess.messages.push(msg);
+                            }
+                        }
+                        // 按时间戳排序
+                        localSess.messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                        // 更新 updateTime
+                        localSess.updateTime = new Date().toISOString();
+                        // 保留本地其他字段
+                    }
+                }
+
+                // 4. 删除云端所有旧数据
                 const existing = await cloudDb.collection(COLLECTION_NAME).limit(100).get();
                 for (const item of existing.data) {
                     if (item._id) {
@@ -1644,8 +1672,8 @@
                     }
                 }
 
-                // 4. 写入合并后的数据
-                for (const session of merged) {
+                // 5. 写入合并后的完整数据
+                for (const session of sessionsData) {
                     await cloudDb.collection(COLLECTION_NAME).add({
                         id: session.id,
                         name: session.name || '新对话',
@@ -1658,8 +1686,8 @@
                     });
                 }
 
-                // 5. 更新本地 sessions 为 merged，并保存
-                sessions = merged;
+                // 6. 更新本地 sessions 为合并后的数据
+                sessions = sessionsData;
                 saveSessionsToLocal();
                 setSyncStatus('manual');
                 isSyncing = false;
@@ -2138,18 +2166,28 @@
             showToast('已删除');
         }
 
+        // ===== 修复版：新建会话 =====
         async function addNewSession() {
-            exitSelectMode();
-            clearExpandIndicator();
-            var s = createSession('新对话', DEFAULT_SYSTEM_PROMPT);
-            sessions.push(s);
-            currentSessionId = s.id;
-            saveSessionsToLocal();
-            renderAll();
-            systemPromptInput.value = s.systemPrompt || '';
-            renameInput.value = s.name || '';
-            if (API_KEY) userInput.focus();
-            showToast('✅ 已创建新对话，请设定剧本');
+            try {
+                if (isSyncing) {
+                    showToast('⏳ 正在同步，请稍后再试');
+                    return;
+                }
+                exitSelectMode();
+                clearExpandIndicator();
+                var s = createSession('新对话', DEFAULT_SYSTEM_PROMPT);
+                sessions.push(s);
+                currentSessionId = s.id;
+                saveSessionsToLocal();
+                renderAll();
+                systemPromptInput.value = s.systemPrompt || '';
+                renameInput.value = s.name || '';
+                if (API_KEY) userInput.focus();
+                showToast('✅ 已创建新对话，请设定剧本');
+            } catch (e) {
+                console.error('创建新会话失败:', e);
+                showToast('❌ 创建失败，请刷新页面重试');
+            }
         }
 
         async function renameCurrentSession(newName) {
@@ -2279,7 +2317,7 @@
             }
         }
 
-        // ========== 【C】 generateSummary 中更新冷却时间 ==========
+        // ===== 摘要生成（包含冷却时间更新） =====
         async function generateSummary(mode, showToastMsg) {
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
@@ -2389,7 +2427,7 @@
                     lastCompressCount = msgCount;
                     localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
 
-                    // 更新冷却时间
+                    // 更新冷却
                     LAST_COMPRESS_TIME = Date.now();
 
                     saveSessionsToLocal();
@@ -2417,17 +2455,16 @@
             }
         }
 
-        // ========== 【C】 checkAndCompress 增加冷却检查 ==========
+        // ===== 检查并压缩（带冷却） =====
         function checkAndCompress() {
             var session = getCurrentSession();
             if (!session) return;
 
             var msgCount = countUserAssistantMessages(session.messages);
 
-            // 检查冷却
             var now = Date.now();
             if (now - LAST_COMPRESS_TIME < COMPRESS_COOLDOWN) {
-                console.log('⏳ 摘要生成冷却中，距上次触发 ' + ((now - LAST_COMPRESS_TIME) / 1000) + ' 秒，跳过自动压缩');
+                console.log('⏳ 摘要冷却中，跳过自动压缩');
                 return;
             }
 
@@ -2443,8 +2480,7 @@
             }
 
             if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.TRIGGER_INTERVAL) {
-                console.log('🔄 触发摘要更新（增量模式），消息数: ' + msgCount + '，距上次触发: ' + (msgCount - lastCompressCount) +
-                    ' 条');
+                console.log('🔄 触发摘要更新，消息数: ' + msgCount);
                 lastCompressCount = msgCount;
                 localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
                 LAST_COMPRESS_TIME = now;
@@ -2455,7 +2491,7 @@
             }
 
             if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && (!session.summary || session.summary.length === 0)) {
-                console.log('🔄 摘要为空，强制触发压缩，消息数: ' + msgCount);
+                console.log('🔄 摘要为空，强制压缩');
                 lastCompressCount = msgCount;
                 localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
                 LAST_COMPRESS_TIME = now;
@@ -2890,6 +2926,7 @@
             }
         }
 
+        // ---- 事件绑定 ----
         modelSelect.addEventListener('change', function() {
             var model = this.value;
             var config = MODEL_CONFIG[model];
@@ -3161,11 +3198,9 @@
                 }
             }
 
-            console.log('✅ 初始化完成（文游节拍器 V10 - 优化同步+冷却+移动端）');
+            console.log('✅ 初始化完成（文游节拍器 V10 - 同步&新建修复）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
-            console.log('📊 保留最近: ' + COMPRESS_CONFIG.KEEP_RECENT + ' 条消息');
-            console.log('📊 动态摘要上限: ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字');
-            console.log('⏳ 摘要冷却时间: ' + (COMPRESS_COOLDOWN / 60000) + ' 分钟');
+            console.log('⏳ 摘要冷却: ' + (COMPRESS_COOLDOWN / 60000) + ' 分钟');
             console.log('🎵 当前模型: ' + modelSelect.value);
         }
 
