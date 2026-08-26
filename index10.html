@@ -1333,7 +1333,9 @@
         const COMPRESS_CONFIG = {
             TRIGGER_COUNT: 40,
             KEEP_RECENT: 16,
-            SUMMARY_MAX_WORDS: 1200
+            TRIGGER_INTERVAL: 32,
+            SUMMARY_MAX_WORDS: 1200,
+            SUMMARY_SEND_MAX: 600
         };
 
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
@@ -1440,6 +1442,16 @@
                 }
             }
             return count;
+        }
+
+        function getContextSummary(session) {
+            var s = session.summary || '';
+            var maxLen = COMPRESS_CONFIG.SUMMARY_SEND_MAX;
+            if (!s || s.length <= maxLen) return s;
+            var start = s.length - maxLen;
+            var nl = s.indexOf('\n', start);
+            if (nl >= 0 && nl < s.length - 1) start = nl + 1;
+            return '…（前方剧情已省略，以下是最近动态）\n' + s.slice(start);
         }
 
         function getCurrentModelConfig() {
@@ -2277,14 +2289,15 @@
                         '要求：\n' +
                         '1. 关键事件标记每条 ≤ 15 字，合并同类项\n' +
                         '2. 近期动态 ≤ 100 字\n' +
-                        '3. 只输出以上格式，不要任何前缀或说明';
+                        '3. 只输出以上格式，不要任何前缀或说明\n' +
+                        '4. 摘要总长不超过 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字';
                 } else {
                     var oldSummaryText = oldSummary || '（暂无旧动态摘要）';
                     compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧动态摘要和新对话，更新极简动态摘要。\n\n' +
                         '【旧动态摘要】（已有的动态内容，请保留所有事件）：\n' + oldSummaryText + '\n\n' +
                         '【新对话】（最近发生的事件）：\n' + historyText + '\n\n' +
                         '请按以下规则更新：\n' +
-                        '1. 【关键事件标记】：保留旧事件，只追加新事件，每条 ≤ 15 字\n' +
+                        '1. 【关键事件标记】：保留重要旧事件，只追加新事件，每条 ≤ 15 字；摘要总长超过 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字时，必须合并同类事件、删除过时细节\n' +
                         '2. 【近期动态】：用 ≤ 100 字概括最新剧情走向，结尾留未落定状态\n' +
                         '3. 只输出更新后的动态摘要，不要加任何前缀或说明';
                 }
@@ -2365,7 +2378,7 @@
                 return;
             }
 
-            if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.KEEP_RECENT) {
+            if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.TRIGGER_INTERVAL) {
                 console.log('🔄 触发摘要更新（增量模式），消息数: ' + msgCount + '，距上次触发: ' + (msgCount - lastCompressCount) +
                     ' 条');
                 lastCompressCount = msgCount;
@@ -2446,10 +2459,11 @@
                     });
                 }
 
-                if (session.summary && session.summary.length > 0) {
+                if (session.summary && session.summary.length > 0 &&
+                    countUserAssistantMessages(session.messages) > COMPRESS_CONFIG.KEEP_RECENT) {
                     contextMessages.push({
                         role: 'system',
-                        content: '【当前剧情动态】\n' + session.summary + '\n（请基于以上内容继续推进）'
+                        content: '【当前剧情动态】\n' + getContextSummary(session) + '\n（请基于以上内容继续推进）'
                     });
                 }
 
