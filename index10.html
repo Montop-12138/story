@@ -7,7 +7,6 @@
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js">
     </script>
     <style>
-        /* ========== 全局重置 & 暗色主题 ========== */
         * {
             margin: 0;
             padding: 0;
@@ -1643,6 +1642,7 @@
             }
         }
 
+        // ===== 【修复】同步策略：本地覆盖云端（删除云端旧数据，写入本地全部） =====
         async function syncToCloud(sessionsData) {
             if (!isCloudReady || !cloudDb) return false;
             if (isSyncing) return false;
@@ -1650,49 +1650,7 @@
                 isSyncing = true;
                 setSyncStatus('syncing');
 
-                const res = await cloudDb.collection(COLLECTION_NAME)
-                    .orderBy('updateTime', 'desc')
-                    .limit(100)
-                    .get();
-                let cloudSessions = [];
-                if (res.data && res.data.length > 0) {
-                    cloudSessions = res.data.map(item => ({
-                        id: item.id,
-                        name: item.name || '新对话',
-                        systemPrompt: item.systemPrompt || DEFAULT_SYSTEM_PROMPT,
-                        fixedContent: item.fixedContent || '',
-                        summary: item.summary || '',
-                        messages: item.messages || [],
-                        createTime: item.createTime || new Date().toISOString(),
-                        updateTime: item.updateTime || new Date().toISOString(),
-                        _cloudId: item._id
-                    }));
-                }
-
-                const localMap = {};
-                for (const s of sessionsData) localMap[s.id] = s;
-
-                for (const cloudSess of cloudSessions) {
-                    const localSess = localMap[cloudSess.id];
-                    if (!localSess) {
-                        sessionsData.push(cloudSess);
-                        localMap[cloudSess.id] = cloudSess;
-                    } else {
-                        const localMsgIds = new Set();
-                        for (const msg of localSess.messages) {
-                            localMsgIds.add(msg.timestamp || msg._id || Math.random().toString(36));
-                        }
-                        for (const msg of cloudSess.messages) {
-                            const msgId = msg.timestamp || msg._id || Math.random().toString(36);
-                            if (!localMsgIds.has(msgId)) {
-                                localSess.messages.push(msg);
-                            }
-                        }
-                        localSess.messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-                        localSess.updateTime = new Date().toISOString();
-                    }
-                }
-
+                // 1. 删除云端所有旧数据
                 const existing = await cloudDb.collection(COLLECTION_NAME).limit(100).get();
                 for (const item of existing.data) {
                     if (item._id) {
@@ -1700,6 +1658,7 @@
                     }
                 }
 
+                // 2. 写入本地全部数据
                 for (const session of sessionsData) {
                     await cloudDb.collection(COLLECTION_NAME).add({
                         id: session.id,
@@ -1713,8 +1672,6 @@
                     });
                 }
 
-                sessions = sessionsData;
-                saveSessionsToLocal();
                 setSyncStatus('manual');
                 isSyncing = false;
                 return true;
@@ -2146,9 +2103,12 @@
                 currentSessionId = sessions[0].id;
                 localStorage.setItem('deepseek_current_session_v9', currentSessionId);
             }
+            // 删除后主动同步到云端
             saveSessionsToLocal();
             renderAll();
-            showToast('已删除');
+            showToast('已删除，正在同步云端...');
+            await syncToCloud(sessions);
+            showToast('✅ 已删除并同步');
         }
 
         async function addNewSession() {
@@ -2167,7 +2127,9 @@
                 systemPromptInput.value = s.systemPrompt || '';
                 renameInput.value = s.name || '';
                 if (API_KEY) userInput.focus();
-                showToast('✅ 已创建新对话，请设定剧本');
+                // 新建后自动同步
+                await syncToCloud(sessions);
+                showToast('✅ 已创建新对话并同步');
             } catch (e) {
                 console.error('创建新会话失败:', e);
                 showToast('❌ 创建失败，请刷新页面重试');
@@ -2183,10 +2145,10 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            showToast('✅ 已重命名为: ' + trimmed);
+            await syncToCloud(sessions);
+            showToast('✅ 已重命名并同步');
         }
-
-        // ===== 消息发送 =====
+</script>        // ===== 消息发送 =====
         async function sendMessage(msg, isEdit) {
             if (typeof msg !== 'string') {
                 msg = userInput.value.trim();
@@ -2304,6 +2266,8 @@
                     saveSessionsToLocal();
                     renderAll();
                     checkAndCompress();
+                    // 消息发送后自动同步
+                    await syncToCloud(sessions);
                 } else {
                     throw new Error('API 返回异常');
                 }
@@ -2335,7 +2299,7 @@
             }
         }
 
-        // ===== 消息操作 =====
+        // ===== 删除消息（修复：删除后重置选中状态 + 同步） =====
         function deleteMessage(index) {
             var session = getCurrentSession();
             if (!session) return;
@@ -2356,14 +2320,27 @@
 
             if (!confirm('确定删除这条消息' + (deleteCount > 1 ? '及其后续回复' : '') + '吗？')) return;
             clearExpandIndicator();
+
+            // 删除消息
             session.messages.splice(index, deleteCount);
             session.updateTime = new Date().toISOString();
             session.summary = '';
             lastCompressCount = 0;
             localStorage.setItem('lastCompressCount_v9', '0');
+
+            // 关键修复：删除后清空选中状态，防止导出时引用已删除消息
+            selectedIndices.clear();
+            updateSelectedCount();
+
             saveSessionsToLocal();
             renderAll();
-            showToast('已删除，动态摘要已重置');
+            showToast('已删除，动态摘要已重置，正在同步...');
+            // 同步到云端
+            syncToCloud(sessions).then(function() {
+                showToast('✅ 删除已同步');
+            }).catch(function() {
+                showToast('⚠️ 删除已同步到本地，云端同步失败');
+            });
         }
 
         function startEditMessage(index) {
@@ -2421,9 +2398,17 @@
                         session.summary = '';
                         lastCompressCount = 0;
                         localStorage.setItem('lastCompressCount_v9', '0');
+
+                        // 编辑后清空选中状态
+                        selectedIndices.clear();
+                        updateSelectedCount();
+
                         saveSessionsToLocal();
                         renderAll();
-                        showToast('✅ 已修改，动态摘要已重置');
+                        showToast('✅ 已修改，动态摘要已重置，正在同步...');
+                        syncToCloud(sessions).then(function() {
+                            showToast('✅ 修改已同步');
+                        });
 
                         setTimeout(function() {
                             sendMessage(newContent, true);
@@ -2693,6 +2678,8 @@
                     if (showToastMsg !== false) {
                         showToast('✅ ' + modeLabel + '动态摘要已生成！');
                     }
+                    // 摘要生成后同步
+                    await syncToCloud(sessions);
                 } else {
                     throw new Error('API 返回异常');
                 }
@@ -2880,7 +2867,9 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            showToast('✅ 设定已保存');
+            showToast('✅ 设定已保存，正在同步...');
+            await syncToCloud(sessions);
+            showToast('✅ 设定已同步');
         }
 
         function saveFixedContent() {
@@ -2891,7 +2880,10 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            showToast('✅ 固定模块已保存');
+            showToast('✅ 固定模块已保存，正在同步...');
+            syncToCloud(sessions).then(function() {
+                showToast('✅ 固定模块已同步');
+            });
         }
 
         function saveSummaryFromTextarea() {
@@ -2902,7 +2894,10 @@
             session.updateTime = new Date().toISOString();
             saveSessionsToLocal();
             renderAll();
-            showToast('✅ 动态摘要已保存');
+            showToast('✅ 动态摘要已保存，正在同步...');
+            syncToCloud(sessions).then(function() {
+                showToast('✅ 动态摘要已同步');
+            });
             isEditingSummary = false;
             summaryCancelBtn.style.display = 'none';
         }
@@ -3171,20 +3166,23 @@
             renderAll();
             forceEnableInput();
 
+            // 首次加载时拉取云端数据并合并（仅用于恢复可能丢失的数据）
             if (isCloudReady) {
                 const cloudData = await loadFromCloud();
                 if (cloudData !== null && cloudData.length > 0) {
-                    var mergedSessions = mergeSessions(sessions, cloudData);
-                    sessions = mergedSessions;
-                    if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
-                        currentSessionId = sessions[0].id;
+                    // 只有本地没有数据时才合并云端
+                    if (sessions.length === 0 || (sessions.length === 1 && sessions[0].messages.length === 0)) {
+                        sessions = cloudData;
+                        if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
+                            currentSessionId = sessions[0].id;
+                        }
+                        saveSessionsToLocal();
+                        renderAll();
                     }
-                    saveSessionsToLocal();
-                    renderAll();
                 }
             }
 
-            console.log('✅ 初始化完成（文游节拍器 · 玫瑰暗调）');
+            console.log('✅ 初始化完成（文游节拍器 · 玫瑰暗调 · 修复同步版）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('⏳ 摘要冷却: ' + (COMPRESS_COOLDOWN / 60000) + ' 分钟');
             console.log('🎵 当前模型: ' + modelSelect.value);
@@ -3192,6 +3190,7 @@
 
         init();
 
+        // 暴露部分函数便于调试
         window.sendMessage = sendMessage;
         window.generateSummary = generateSummary;
         window.forceEnableInput = forceEnableInput;
@@ -3200,6 +3199,6 @@
         window.manualSync = manualSync;
         window.COMPRESS_CONFIG = COMPRESS_CONFIG;
         window.createSession = createSession;
-    </script>
+</script>
 </body>
 </html>
