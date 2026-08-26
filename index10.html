@@ -1092,7 +1092,6 @@
                 padding-bottom: max(8px, env(safe-area-inset-bottom));
             }
         }
-        /* ============ 移动端优化 ============ */
         @media (max-width: 480px) {
             .app-container {
                 padding: 4px 6px;
@@ -1170,7 +1169,6 @@
                 font-size: 9px;
                 padding: 1px 6px;
             }
-
             .input-section {
                 flex-direction: column;
                 gap: 6px;
@@ -1345,7 +1343,9 @@
         <div class="toast" id="toast"></div>
     </div>
 
-    <script>
+    <script>        // ============================================================
+        //  全局配置与常量
+        // ============================================================
         const DEFAULT_SYSTEM_PROMPT =
             '你是一个沉浸式文字游戏的主持人。请根据用户提供的设定和对话历史，自然地推动剧情发展。每次回复控制在 500 字以内，不要超过。';
 
@@ -1390,10 +1390,13 @@
             SUMMARY_SEND_MAX: 600
         };
 
-        // 冷却时间（5分钟）
+        // 摘要冷却时间（5分钟）
         let LAST_COMPRESS_TIME = 0;
         const COMPRESS_COOLDOWN = 300000;
 
+        // ============================================================
+        //  核心状态变量
+        // ============================================================
         let API_KEY = localStorage.getItem('deepseek_api_key') || '';
         let sessions = [];
         let currentSessionId = null;
@@ -1402,7 +1405,6 @@
         let selectedIndices = new Set();
         let isCloudReady = false;
         let isSyncing = false;
-        let touchMessageIndex = null;
         let isCompressing = false;
         let expandedText = null;
         let isEditingSummary = false;
@@ -1410,6 +1412,9 @@
 
         const COLLECTION_NAME = 'conversations_v9';
 
+        // ============================================================
+        //  DOM 引用
+        // ============================================================
         const apiKeyInput = document.getElementById('apiKeyInput');
         const modelSelect = document.getElementById('modelSelect');
         const saveKeyBtn = document.getElementById('saveKeyBtn');
@@ -1417,8 +1422,6 @@
         const chatScrollArea = document.getElementById('chatScrollArea');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
-        const statusTip = document.getElementById('statusTip');
-        const toast = document.getElementById('toast');
         const sessionBar = document.getElementById('sessionBar');
         const toggleBtn = document.getElementById('toggleCollapseBtn');
         const collapsibleSection = document.getElementById('collapsibleSection');
@@ -1428,26 +1431,20 @@
         const syncText = document.getElementById('syncText');
         const tokenInfo = document.getElementById('tokenInfo');
         const expandIndicator = document.getElementById('expandIndicator');
-
         const maxTokensSlider = document.getElementById('maxTokensSlider');
         const maxTokensDisplay = document.getElementById('maxTokensDisplay');
         const renameInput = document.getElementById('renameInput');
         const renameBtn = document.getElementById('renameBtn');
-
         const systemPromptInput = document.getElementById('systemPromptInput');
         const savePromptBtn = document.getElementById('savePromptBtn');
         const fullSummaryBtn = document.getElementById('fullSummaryBtn');
         const incrementalSummaryBtn = document.getElementById('incrementalSummaryBtn');
-
-        const fixedModule = document.getElementById('fixedModule');
         const fixedContent = document.getElementById('fixedContent');
         const fixedSaveBtn = document.getElementById('fixedSaveBtn');
-
         const summaryDisplay = document.getElementById('summaryDisplay');
         const summaryTextarea = document.getElementById('summaryTextarea');
         const summarySaveBtn = document.getElementById('summarySaveBtn');
         const summaryCancelBtn = document.getElementById('summaryCancelBtn');
-
         const copyLastBtn = document.getElementById('copyLastBtn');
         const copyAllBtn = document.getElementById('copyAllBtn');
         const exportBtn = document.getElementById('exportBtn');
@@ -1457,32 +1454,43 @@
         const selectedCount = document.getElementById('selectedCount');
         const copySelectedBtn = document.getElementById('copySelectedBtn');
         const newSessionBtn = document.getElementById('newSessionBtn');
+        const toast = document.getElementById('toast');
 
         let toastTimer = null;
 
+        // ============================================================
+        //  工具函数
+        // ============================================================
         function showToast(msg) {
             toast.textContent = msg;
             toast.classList.add('show');
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(function() {
-                toast.classList.remove('show');
-            }, 2500);
+            toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2500);
         }
 
         function generateId() {
             return Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
         }
 
-        function getSessionNameFromMessages(messages) {
-            for (var i = 0; i < messages.length; i++) {
-                if (messages[i].role === 'user') {
-                    var txt = messages[i].content.replace(/\n/g, ' ').trim();
-                    return txt.length > 15 ? txt.substring(0, 15) + '…' : txt;
-                }
-            }
-            return '新对话';
+        // ============================================================
+        //  ⭐ 关键：创建会话（之前缺失，现已补全）
+        // ============================================================
+        function createSession(name, systemPrompt) {
+            return {
+                id: generateId(),
+                name: name || '新对话',
+                systemPrompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
+                fixedContent: '',
+                summary: '',
+                messages: [],
+                createTime: new Date().toISOString(),
+                updateTime: new Date().toISOString()
+            };
         }
 
+        // ============================================================
+        //  会话与消息辅助
+        // ============================================================
         function getCurrentSession() {
             for (var i = 0; i < sessions.length; i++) {
                 if (sessions[i].id === currentSessionId) return sessions[i];
@@ -1493,9 +1501,7 @@
         function countUserAssistantMessages(messages) {
             var count = 0;
             for (var i = 0; i < messages.length; i++) {
-                if (messages[i].role === 'user' || messages[i].role === 'assistant') {
-                    count++;
-                }
+                if (messages[i].role === 'user' || messages[i].role === 'assistant') count++;
             }
             return count;
         }
@@ -1510,9 +1516,14 @@
             return '…（前方剧情已省略，以下是最近动态）\n' + s.slice(start);
         }
 
-        function getCurrentModelConfig() {
-            var model = modelSelect.value;
-            return MODEL_CONFIG[model] || MODEL_CONFIG['deepseek-v4-flash'];
+        function getSessionNameFromMessages(messages) {
+            for (var i = 0; i < messages.length; i++) {
+                if (messages[i].role === 'user') {
+                    var txt = messages[i].content.replace(/\n/g, ' ').trim();
+                    return txt.length > 15 ? txt.substring(0, 15) + '…' : txt;
+                }
+            }
+            return '新对话';
         }
 
         function setSyncStatus(status) {
@@ -1545,6 +1556,9 @@
             }
         }
 
+        // ============================================================
+        //  云端操作（修复同步逻辑）
+        // ============================================================
         const ENV_ID = 'deepseek-chat-d5gg0748z3b9dfe24';
         let cloudApp = null;
         let cloudDb = null;
@@ -1603,7 +1617,7 @@
             }
         }
 
-        // ===== 修复版：syncToCloud（只增不删，本地优先） =====
+        // 修复后的同步函数（本地优先，只增不删）
         async function syncToCloud(sessionsData) {
             if (!isCloudReady || !cloudDb) return false;
             if (isSyncing) return false;
@@ -1611,7 +1625,7 @@
                 isSyncing = true;
                 setSyncStatus('syncing');
 
-                // 1. 拉取云端所有会话
+                // 拉取云端
                 const res = await cloudDb.collection(COLLECTION_NAME)
                     .orderBy('updateTime', 'desc')
                     .limit(100)
@@ -1631,21 +1645,19 @@
                     }));
                 }
 
-                // 2. 构建本地会话 Map
+                // 构建本地 map
                 const localMap = {};
                 for (const s of sessionsData) {
                     localMap[s.id] = s;
                 }
 
-                // 3. 合并云端会话到本地（只增不删）
+                // 合并云端（只增不删）
                 for (const cloudSess of cloudSessions) {
                     const localSess = localMap[cloudSess.id];
                     if (!localSess) {
-                        // 本地没有，直接加入
                         sessionsData.push(cloudSess);
                         localMap[cloudSess.id] = cloudSess;
                     } else {
-                        // 本地已有，合并消息（以本地消息为主，补充云端中时间戳不同的消息）
                         const localMsgIds = new Set();
                         for (const msg of localSess.messages) {
                             localMsgIds.add(msg.timestamp || msg._id || Math.random().toString(36));
@@ -1656,15 +1668,12 @@
                                 localSess.messages.push(msg);
                             }
                         }
-                        // 按时间戳排序
                         localSess.messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-                        // 更新 updateTime
                         localSess.updateTime = new Date().toISOString();
-                        // 保留本地其他字段
                     }
                 }
 
-                // 4. 删除云端所有旧数据
+                // 删除云端所有旧数据
                 const existing = await cloudDb.collection(COLLECTION_NAME).limit(100).get();
                 for (const item of existing.data) {
                     if (item._id) {
@@ -1672,7 +1681,7 @@
                     }
                 }
 
-                // 5. 写入合并后的完整数据
+                // 写入全部
                 for (const session of sessionsData) {
                     await cloudDb.collection(COLLECTION_NAME).add({
                         id: session.id,
@@ -1686,7 +1695,6 @@
                     });
                 }
 
-                // 6. 更新本地 sessions 为合并后的数据
                 sessions = sessionsData;
                 saveSessionsToLocal();
                 setSyncStatus('manual');
@@ -1700,6 +1708,9 @@
             }
         }
 
+        // ============================================================
+        //  本地存储
+        // ============================================================
         function saveSessionsToLocal() {
             localStorage.setItem('deepseek_sessions_v9', JSON.stringify(sessions));
             if (currentSessionId) {
@@ -1715,15 +1726,9 @@
             } else { sessions = []; }
 
             for (var i = 0; i < sessions.length; i++) {
-                if (!sessions[i].systemPrompt) {
-                    sessions[i].systemPrompt = DEFAULT_SYSTEM_PROMPT;
-                }
-                if (sessions[i].fixedContent === undefined) {
-                    sessions[i].fixedContent = '';
-                }
-                if (sessions[i].summary === undefined) {
-                    sessions[i].summary = '';
-                }
+                if (!sessions[i].systemPrompt) sessions[i].systemPrompt = DEFAULT_SYSTEM_PROMPT;
+                if (sessions[i].fixedContent === undefined) sessions[i].fixedContent = '';
+                if (sessions[i].summary === undefined) sessions[i].summary = '';
             }
 
             if (sessions.length === 0) {
@@ -1745,26 +1750,9 @@
             lastCompressCount = parseInt(localStorage.getItem('lastCompressCount_v9')) || 0;
         }
 
-        async function manualSync() {
-            if (!isCloudReady) {
-                showToast('云端未连接，尝试初始化...');
-                await initCloud();
-                if (!isCloudReady) {
-                    showToast('❌ 云端连接失败');
-                    return;
-                }
-            }
-            showToast('🔄 正在同步...');
-            setSyncStatus('syncing');
-            const success = await syncToCloud(sessions);
-            if (success) {
-                renderAll();
-                showToast('✅ 同步完成！');
-            } else {
-                showToast('⚠️ 同步失败');
-            }
-        }
-
+        // ============================================================
+        //  合并函数（用于初始化合并）
+        // ============================================================
         function mergeSessions(localSessions, cloudSessions) {
             var merged = [];
             var localMap = {};
@@ -1820,7 +1808,9 @@
 
             return merged;
         }
-
+                // ============================================================
+        //  渲染函数
+        // ============================================================
         function renderFixedModule() {
             var session = getCurrentSession();
             if (session && session.fixedContent && session.fixedContent.length > 0) {
@@ -1839,40 +1829,6 @@
                 summaryDisplay.classList.remove('has-summary');
                 summaryTextarea.value = '';
             }
-        }
-
-        function saveFixedContent() {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
-            var content = fixedContent.value.trim();
-            session.fixedContent = content;
-            session.updateTime = new Date().toISOString();
-            saveSessionsToLocal();
-            renderAll();
-            showToast('✅ 固定模块已保存');
-        }
-
-        function saveSummaryFromTextarea() {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
-            var newSummary = summaryTextarea.value.trim();
-            session.summary = newSummary;
-            session.updateTime = new Date().toISOString();
-            saveSessionsToLocal();
-            renderAll();
-            showToast('✅ 动态摘要已保存');
-            isEditingSummary = false;
-            summaryCancelBtn.style.display = 'none';
-        }
-
-        function cancelSummaryEdit() {
-            var session = getCurrentSession();
-            if (session) {
-                summaryTextarea.value = session.summary || '';
-            }
-            isEditingSummary = false;
-            summaryCancelBtn.style.display = 'none';
-            showToast('已取消编辑');
         }
 
         function renderSessionTabs() {
@@ -2108,15 +2064,11 @@
             sendBtn.disabled = !enabled;
             if (enabled) {
                 userInput.focus();
-                statusTip.innerHTML =
+                document.getElementById('statusTip').innerHTML =
                     '<span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">已同步</span></span> 💡 多模型切换 · 文游引擎 <span class="token-info" id="tokenInfo">📊 固定模块 + 动态摘要 + 最近16条</span>';
             } else {
-                statusTip.innerHTML =
+                document.getElementById('statusTip').innerHTML =
                     '<span class="sync-status"><span class="sync-dot error" id="syncDot"></span><span id="syncText">未登录</span></span> ⏳ 请先输入 API Key';
-            }
-            var newTokenInfo = document.getElementById('tokenInfo');
-            if (newTokenInfo) {
-                window.tokenInfoRef = newTokenInfo;
             }
         }
 
@@ -2135,6 +2087,30 @@
             expandedText = null;
         }
 
+        function updateSelectedCount() {
+            selectedCount.textContent = selectedIndices.size + '条';
+            var session = getCurrentSession();
+            if (session) {
+                var total = 0;
+                for (var i = 0; i < session.messages.length; i++) {
+                    var m = session.messages[i];
+                    if (m.role !== 'error' && m.role !== 'loading') total++;
+                }
+                selectAllCheckbox.checked = selectedIndices.size === total && total > 0;
+            }
+        }
+
+        function exitSelectMode() {
+            selectMode = false;
+            selectedIndices.clear();
+            selectModeBtn.textContent = '☑️ 选择';
+            selectModeBtn.classList.remove('active');
+            selectInfo.style.display = 'none';
+        }
+
+        // ============================================================
+        //  会话操作（切换、删除、新建、重命名）
+        // ============================================================
         function switchSession(sessionId) {
             if (sessionId === currentSessionId) return;
             exitSelectMode();
@@ -2166,7 +2142,7 @@
             showToast('已删除');
         }
 
-        // ===== 修复版：新建会话 =====
+        // 修复后的新建会话
         async function addNewSession() {
             try {
                 if (isSyncing) {
@@ -2202,312 +2178,14 @@
             showToast('✅ 已重命名为: ' + trimmed);
         }
 
-        async function saveSystemPrompt() {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
-            var prompt = systemPromptInput.value.trim();
-            if (!prompt) { showToast('请输入设定内容'); return; }
-            session.systemPrompt = prompt;
-            session.updateTime = new Date().toISOString();
-            saveSessionsToLocal();
-            renderAll();
-            showToast('✅ 设定已保存');
-        }
-
-        async function refreshMessage(index) {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
-            if (index < 0 || index >= session.messages.length) return;
-            var msg = session.messages[index];
-            if (msg.role !== 'assistant') {
-                showToast('只能刷新 AI 的回复');
-                return;
-            }
-
-            var userIndex = -1;
-            for (var i = index - 1; i >= 0; i--) {
-                if (session.messages[i].role === 'user') {
-                    userIndex = i;
-                    break;
-                }
-            }
-            if (userIndex === -1) {
-                showToast('没有找到对应的用户消息');
-                return;
-            }
-
-            var userMsg = session.messages[userIndex];
-            var userContent = userMsg.content;
-
-            session.messages.splice(index, session.messages.length - index);
-            session.summary = '';
-            saveSessionsToLocal();
-            renderAll();
-
-            showToast('🔄 正在重新生成...');
-
-            setTimeout(function() {
-                sendMessage(userContent, true);
-            }, 200);
-        }
-
-        async function expandMessage(index) {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
-            if (index < 0 || index >= session.messages.length) return;
-            var msg = session.messages[index];
-            if (msg.role === 'error' || msg.role === 'loading') {
-                showToast('无法扩写此消息');
-                return;
-            }
-
-            var key = localStorage.getItem('deepseek_api_key');
-            if (!key) { showToast('请先保存 API Key'); return; }
-
-            var originalContent = msg.content;
-
-            showToast('📝 正在扩写...');
-
-            try {
-                var expandPrompt = '请将以下内容扩写，要求：\n' +
-                    '1. 只扩写言语、动作、心理活动\n' +
-                    '2. 不要增加环境描写、场景填充或无关细节\n' +
-                    '3. 保持简洁，不要过度冗余\n' +
-                    '4. 只输出扩写后的内容，不要加任何前缀或说明\n\n' +
-                    '原文：\n' + originalContent;
-
-                var response = await fetch('https://api.deepseek.com/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + key
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-v4-flash',
-                        messages: [
-                            { role: 'system', content: '你是文本扩写助手。只扩写言语、动作、心理，不加环境描写，保持简洁。' },
-                            { role: 'user', content: expandPrompt }
-                        ],
-                        max_tokens: Math.min(parseInt(maxTokensSlider.value) || 2048, 512),
-                        temperature: 0.7
-                    })
-                });
-
-                var data = await response.json();
-
-                if (!response.ok) {
-                    var errMsg = data.error ? data.error.message : '请求失败';
-                    throw new Error('错误 ' + response.status + ': ' + errMsg);
-                }
-
-                if (data.choices && data.choices[0]) {
-                    var expanded = data.choices[0].message.content.trim();
-                    showExpandedInInput(expanded);
-                } else {
-                    throw new Error('API 返回异常');
-                }
-
-            } catch (error) {
-                var errorText = '❌ 扩写失败: ' + error.message;
-                if (error.message.includes('401') || error.message.includes('403')) {
-                    errorText = '❌ API Key 无效，请重新输入';
-                }
-                showToast(errorText);
-                console.error(errorText);
-            }
-        }
-
-        // ===== 摘要生成（包含冷却时间更新） =====
-        async function generateSummary(mode, showToastMsg) {
-            var session = getCurrentSession();
-            if (!session) { showToast('请先创建对话'); return; }
-
-            var model = modelSelect.value;
-            var config = MODEL_CONFIG[model];
-            if (!config) { showToast('请选择有效模型'); return; }
-
-            var key = localStorage.getItem(config.keyStorage);
-            if (!key) { showToast('请先保存 ' + model + ' 的 API Key'); return; }
-
-            var historyMessages = [];
-            for (var i = 0; i < session.messages.length; i++) {
-                var m = session.messages[i];
-                if (m.role === 'user' || m.role === 'assistant') {
-                    historyMessages.push(m);
-                }
-            }
-
-            if (historyMessages.length === 0) {
-                showToast('没有对话记录可以总结');
-                return;
-            }
-
-            if (isCompressing) {
-                showToast('⏳ 正在压缩中，请稍候...');
-                return;
-            }
-
-            isCompressing = true;
-            fullSummaryBtn.disabled = true;
-            incrementalSummaryBtn.disabled = true;
-
-            var modeLabel = mode === 'full' ? '全量整理' : '增量更新';
-            if (showToastMsg !== false) {
-                showToast('🧠 正在生成' + modeLabel + '动态摘要...');
-            }
-
-            try {
-                var oldSummary = session.summary || '';
-                var historyText = '';
-                for (var i = 0; i < historyMessages.length; i++) {
-                    var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
-                    historyText += label + '：' + historyMessages[i].content + '\n';
-                }
-
-                var compressPrompt = '';
-
-                if (mode === 'full') {
-                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下全部对话历史，生成极简动态摘要。\n\n' +
-                        '【全部对话历史】：\n' + historyText + '\n\n' +
-                        '请按以下格式输出：\n\n' +
-                        '## 关键事件标记\n' +
-                        '- 用 1-2 条概括整段剧情核心推进，每条 ≤ 15 字，只写"谁 + 做了什么"\n' +
-                        '- 合并同类事件，不要按对话轮次展开\n\n' +
-                        '## 近期动态\n' +
-                        '用 1-2 句话提炼剧情走向和关系变化，≤ 100 字\n' +
-                        '结尾留一个未落定的状态（如"尚未明确回应"）\n\n' +
-                        '要求：\n' +
-                        '1. 关键事件标记每条 ≤ 15 字，合并同类项\n' +
-                        '2. 近期动态 ≤ 100 字\n' +
-                        '3. 只输出以上格式，不要任何前缀或说明\n' +
-                        '4. 摘要总长不超过 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字';
-                } else {
-                    var oldSummaryText = oldSummary || '（暂无旧动态摘要）';
-                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧动态摘要和新对话，更新极简动态摘要。\n\n' +
-                        '【旧动态摘要】（已有的动态内容，请保留所有事件）：\n' + oldSummaryText + '\n\n' +
-                        '【新对话】（最近发生的事件）：\n' + historyText + '\n\n' +
-                        '请按以下规则更新：\n' +
-                        '1. 【关键事件标记】：保留重要旧事件，只追加新事件，每条 ≤ 15 字；摘要总长超过 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字时，必须合并同类事件、删除过时细节\n' +
-                        '2. 【近期动态】：用 ≤ 100 字概括最新剧情走向，结尾留未落定状态\n' +
-                        '3. 只输出更新后的动态摘要，不要加任何前缀或说明';
-                }
-
-                var maxTokens = 2048;
-
-                var response = await fetch(config.url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + key
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            { role: 'system', content: '你是专业的剧本摘要助手。只生成极简动态摘要。' },
-                            { role: 'user', content: compressPrompt }
-                        ],
-                        max_tokens: maxTokens,
-                        temperature: 0.4
-                    })
-                });
-
-                var data = await response.json();
-
-                if (!response.ok) {
-                    var errMsg = data.error ? data.error.message : '请求失败';
-                    throw new Error('错误 ' + response.status + ': ' + errMsg);
-                }
-
-                if (data.choices && data.choices[0]) {
-                    var summary = data.choices[0].message.content.trim();
-                    session.summary = summary;
-                    session.updateTime = new Date().toISOString();
-
-                    var msgCount = countUserAssistantMessages(session.messages);
-                    lastCompressCount = msgCount;
-                    localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
-
-                    // 更新冷却
-                    LAST_COMPRESS_TIME = Date.now();
-
-                    saveSessionsToLocal();
-                    renderSummary();
-                    updateTokenInfo();
-
-                    if (showToastMsg !== false) {
-                        showToast('✅ ' + modeLabel + '动态摘要已生成！');
-                    }
-                } else {
-                    throw new Error('API 返回异常');
-                }
-
-            } catch (error) {
-                var errorText = '❌ 生成' + modeLabel + '动态摘要失败: ' + error.message;
-                if (error.message.includes('401') || error.message.includes('403')) {
-                    errorText = '❌ API Key 无效，请重新输入';
-                }
-                showToast(errorText);
-                console.error(errorText);
-            } finally {
-                isCompressing = false;
-                fullSummaryBtn.disabled = false;
-                incrementalSummaryBtn.disabled = false;
-            }
-        }
-
-        // ===== 检查并压缩（带冷却） =====
-        function checkAndCompress() {
-            var session = getCurrentSession();
-            if (!session) return;
-
-            var msgCount = countUserAssistantMessages(session.messages);
-
-            var now = Date.now();
-            if (now - LAST_COMPRESS_TIME < COMPRESS_COOLDOWN) {
-                console.log('⏳ 摘要冷却中，跳过自动压缩');
-                return;
-            }
-
-            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && lastCompressCount === 0) {
-                console.log('🔄 首次触发自动压缩，消息数: ' + msgCount);
-                lastCompressCount = msgCount;
-                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
-                LAST_COMPRESS_TIME = now;
-                setTimeout(function() {
-                    generateSummary('incremental', false);
-                }, 500);
-                return;
-            }
-
-            if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.TRIGGER_INTERVAL) {
-                console.log('🔄 触发摘要更新，消息数: ' + msgCount);
-                lastCompressCount = msgCount;
-                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
-                LAST_COMPRESS_TIME = now;
-                setTimeout(function() {
-                    generateSummary('incremental', false);
-                }, 500);
-                return;
-            }
-
-            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && (!session.summary || session.summary.length === 0)) {
-                console.log('🔄 摘要为空，强制压缩');
-                lastCompressCount = msgCount;
-                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
-                LAST_COMPRESS_TIME = now;
-                setTimeout(function() {
-                    generateSummary('incremental', false);
-                }, 500);
-                return;
-            }
-        }
-
+        // ============================================================
+        //  消息操作（发送、编辑、删除、刷新、扩写、摘要）
+        // ============================================================
         async function sendMessage(msg, isEdit) {
             if (typeof msg !== 'string') {
                 msg = userInput.value.trim();
             }
             if (!msg) { showToast('请输入消息'); return; }
-
             clearExpandIndicator();
 
             var model = modelSelect.value;
@@ -2520,12 +2198,6 @@
             var session = getCurrentSession();
             if (!session) { showToast('请先创建对话'); return; }
 
-            if (!session.systemPrompt || session.systemPrompt === DEFAULT_SYSTEM_PROMPT) {
-                if (session.messages.length === 0) {
-                    showToast('💡 建议先设定剧本再开始对话');
-                }
-            }
-
             if (!isEdit) {
                 session.messages.push({ role: 'user', content: msg, timestamp: new Date().toISOString() });
                 session.updateTime = new Date().toISOString();
@@ -2535,6 +2207,7 @@
                 renderAll();
             }
 
+            // 移除旧的 loading
             var newMsgs = [];
             for (var i = 0; i < session.messages.length; i++) {
                 if (session.messages[i].role !== 'loading') newMsgs.push(session.messages[i]);
@@ -2629,13 +2302,10 @@
                     session.updateTime = new Date().toISOString();
                     saveSessionsToLocal();
                     renderAll();
-
                     checkAndCompress();
-
                 } else {
                     throw new Error('API 返回异常');
                 }
-
             } catch (error) {
                 var newMsgs3 = [];
                 for (var k = 0; k < session.messages.length; k++) {
@@ -2703,7 +2373,6 @@
                 showToast('只能编辑用户消息');
                 return;
             }
-
             var wrappers = chatBox.querySelectorAll('.message-wrapper');
             if (index < wrappers.length) {
                 var wrapper = wrappers[index];
@@ -2784,14 +2453,6 @@
             }
         }
 
-        function exitSelectMode() {
-            selectMode = false;
-            selectedIndices.clear();
-            selectModeBtn.textContent = '☑️ 选择';
-            selectModeBtn.classList.remove('active');
-            selectInfo.style.display = 'none';
-        }
-
         function toggleSelectMessage(index) {
             if (!selectMode) return;
             var session = getCurrentSession();
@@ -2805,19 +2466,6 @@
             }
             updateSelectedCount();
             renderChat();
-        }
-
-        function updateSelectedCount() {
-            selectedCount.textContent = selectedIndices.size + '条';
-            var session = getCurrentSession();
-            if (session) {
-                var total = 0;
-                for (var i = 0; i < session.messages.length; i++) {
-                    var m = session.messages[i];
-                    if (m.role !== 'error' && m.role !== 'loading') total++;
-                }
-                selectAllCheckbox.checked = selectedIndices.size === total && total > 0;
-            }
         }
 
         function selectAllMessages() {
@@ -2926,7 +2574,358 @@
             }
         }
 
-        // ---- 事件绑定 ----
+        // ============================================================
+        //  摘要生成与压缩
+        // ============================================================
+        async function generateSummary(mode, showToastMsg) {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+
+            var model = modelSelect.value;
+            var config = MODEL_CONFIG[model];
+            if (!config) { showToast('请选择有效模型'); return; }
+
+            var key = localStorage.getItem(config.keyStorage);
+            if (!key) { showToast('请先保存 ' + model + ' 的 API Key'); return; }
+
+            var historyMessages = [];
+            for (var i = 0; i < session.messages.length; i++) {
+                var m = session.messages[i];
+                if (m.role === 'user' || m.role === 'assistant') {
+                    historyMessages.push(m);
+                }
+            }
+
+            if (historyMessages.length === 0) {
+                showToast('没有对话记录可以总结');
+                return;
+            }
+
+            if (isCompressing) {
+                showToast('⏳ 正在压缩中，请稍候...');
+                return;
+            }
+
+            isCompressing = true;
+            fullSummaryBtn.disabled = true;
+            incrementalSummaryBtn.disabled = true;
+
+            var modeLabel = mode === 'full' ? '全量整理' : '增量更新';
+            if (showToastMsg !== false) {
+                showToast('🧠 正在生成' + modeLabel + '动态摘要...');
+            }
+
+            try {
+                var oldSummary = session.summary || '';
+                var historyText = '';
+                for (var i = 0; i < historyMessages.length; i++) {
+                    var label = historyMessages[i].role === 'user' ? '用户' : 'AI';
+                    historyText += label + '：' + historyMessages[i].content + '\n';
+                }
+
+                var compressPrompt = '';
+                if (mode === 'full') {
+                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下全部对话历史，生成极简动态摘要。\n\n' +
+                        '【全部对话历史】：\n' + historyText + '\n\n' +
+                        '请按以下格式输出：\n\n' +
+                        '## 关键事件标记\n' +
+                        '- 用 1-2 条概括整段剧情核心推进，每条 ≤ 15 字，只写"谁 + 做了什么"\n' +
+                        '- 合并同类事件，不要按对话轮次展开\n\n' +
+                        '## 近期动态\n' +
+                        '用 1-2 句话提炼剧情走向和关系变化，≤ 100 字\n' +
+                        '结尾留一个未落定的状态（如"尚未明确回应"）\n\n' +
+                        '要求：\n' +
+                        '1. 关键事件标记每条 ≤ 15 字，合并同类项\n' +
+                        '2. 近期动态 ≤ 100 字\n' +
+                        '3. 只输出以上格式，不要任何前缀或说明\n' +
+                        '4. 摘要总长不超过 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字';
+                } else {
+                    var oldSummaryText = oldSummary || '（暂无旧动态摘要）';
+                    compressPrompt = '你是一个专业的剧本摘要助手。请根据以下旧动态摘要和新对话，更新极简动态摘要。\n\n' +
+                        '【旧动态摘要】（已有的动态内容，请保留所有事件）：\n' + oldSummaryText + '\n\n' +
+                        '【新对话】（最近发生的事件）：\n' + historyText + '\n\n' +
+                        '请按以下规则更新：\n' +
+                        '1. 【关键事件标记】：保留重要旧事件，只追加新事件，每条 ≤ 15 字；摘要总长超过 ' + COMPRESS_CONFIG.SUMMARY_MAX_WORDS + ' 字时，必须合并同类事件、删除过时细节\n' +
+                        '2. 【近期动态】：用 ≤ 100 字概括最新剧情走向，结尾留未落定状态\n' +
+                        '3. 只输出更新后的动态摘要，不要加任何前缀或说明';
+                }
+
+                var maxTokens = 2048;
+
+                var response = await fetch(config.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + key
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: '你是专业的剧本摘要助手。只生成极简动态摘要。' },
+                            { role: 'user', content: compressPrompt }
+                        ],
+                        max_tokens: maxTokens,
+                        temperature: 0.4
+                    })
+                });
+
+                var data = await response.json();
+
+                if (!response.ok) {
+                    var errMsg = data.error ? data.error.message : '请求失败';
+                    throw new Error('错误 ' + response.status + ': ' + errMsg);
+                }
+
+                if (data.choices && data.choices[0]) {
+                    var summary = data.choices[0].message.content.trim();
+                    session.summary = summary;
+                    session.updateTime = new Date().toISOString();
+
+                    var msgCount = countUserAssistantMessages(session.messages);
+                    lastCompressCount = msgCount;
+                    localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                    LAST_COMPRESS_TIME = Date.now();
+
+                    saveSessionsToLocal();
+                    renderSummary();
+                    updateTokenInfo();
+
+                    if (showToastMsg !== false) {
+                        showToast('✅ ' + modeLabel + '动态摘要已生成！');
+                    }
+                } else {
+                    throw new Error('API 返回异常');
+                }
+            } catch (error) {
+                var errorText = '❌ 生成' + modeLabel + '动态摘要失败: ' + error.message;
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    errorText = '❌ API Key 无效，请重新输入';
+                }
+                showToast(errorText);
+                console.error(errorText);
+            } finally {
+                isCompressing = false;
+                fullSummaryBtn.disabled = false;
+                incrementalSummaryBtn.disabled = false;
+            }
+        }
+
+        function checkAndCompress() {
+            var session = getCurrentSession();
+            if (!session) return;
+
+            var msgCount = countUserAssistantMessages(session.messages);
+
+            var now = Date.now();
+            if (now - LAST_COMPRESS_TIME < COMPRESS_COOLDOWN) {
+                console.log('⏳ 摘要冷却中，跳过自动压缩');
+                return;
+            }
+
+            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && lastCompressCount === 0) {
+                console.log('🔄 首次触发自动压缩，消息数: ' + msgCount);
+                lastCompressCount = msgCount;
+                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                LAST_COMPRESS_TIME = now;
+                setTimeout(function() { generateSummary('incremental', false); }, 500);
+                return;
+            }
+
+            if (lastCompressCount > 0 && msgCount - lastCompressCount >= COMPRESS_CONFIG.TRIGGER_INTERVAL) {
+                console.log('🔄 触发摘要更新，消息数: ' + msgCount);
+                lastCompressCount = msgCount;
+                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                LAST_COMPRESS_TIME = now;
+                setTimeout(function() { generateSummary('incremental', false); }, 500);
+                return;
+            }
+
+            if (msgCount >= COMPRESS_CONFIG.TRIGGER_COUNT && (!session.summary || session.summary.length === 0)) {
+                console.log('🔄 摘要为空，强制压缩');
+                lastCompressCount = msgCount;
+                localStorage.setItem('lastCompressCount_v9', String(lastCompressCount));
+                LAST_COMPRESS_TIME = now;
+                setTimeout(function() { generateSummary('incremental', false); }, 500);
+                return;
+            }
+        }
+
+        // ============================================================
+        //  刷新与扩写
+        // ============================================================
+        async function refreshMessage(index) {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            if (index < 0 || index >= session.messages.length) return;
+            var msg = session.messages[index];
+            if (msg.role !== 'assistant') {
+                showToast('只能刷新 AI 的回复');
+                return;
+            }
+
+            var userIndex = -1;
+            for (var i = index - 1; i >= 0; i--) {
+                if (session.messages[i].role === 'user') {
+                    userIndex = i;
+                    break;
+                }
+            }
+            if (userIndex === -1) {
+                showToast('没有找到对应的用户消息');
+                return;
+            }
+
+            var userMsg = session.messages[userIndex];
+            var userContent = userMsg.content;
+
+            session.messages.splice(index, session.messages.length - index);
+            session.summary = '';
+            saveSessionsToLocal();
+            renderAll();
+
+            showToast('🔄 正在重新生成...');
+            setTimeout(function() { sendMessage(userContent, true); }, 200);
+        }
+
+        async function expandMessage(index) {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            if (index < 0 || index >= session.messages.length) return;
+            var msg = session.messages[index];
+            if (msg.role === 'error' || msg.role === 'loading') {
+                showToast('无法扩写此消息');
+                return;
+            }
+
+            var key = localStorage.getItem('deepseek_api_key');
+            if (!key) { showToast('请先保存 API Key'); return; }
+
+            var originalContent = msg.content;
+            showToast('📝 正在扩写...');
+
+            try {
+                var expandPrompt = '请将以下内容扩写，要求：\n' +
+                    '1. 只扩写言语、动作、心理活动\n' +
+                    '2. 不要增加环境描写、场景填充或无关细节\n' +
+                    '3. 保持简洁，不要过度冗余\n' +
+                    '4. 只输出扩写后的内容，不要加任何前缀或说明\n\n' +
+                    '原文：\n' + originalContent;
+
+                var response = await fetch('https://api.deepseek.com/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + key
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-v4-flash',
+                        messages: [
+                            { role: 'system', content: '你是文本扩写助手。只扩写言语、动作、心理，不加环境描写，保持简洁。' },
+                            { role: 'user', content: expandPrompt }
+                        ],
+                        max_tokens: Math.min(parseInt(maxTokensSlider.value) || 2048, 512),
+                        temperature: 0.7
+                    })
+                });
+
+                var data = await response.json();
+
+                if (!response.ok) {
+                    var errMsg = data.error ? data.error.message : '请求失败';
+                    throw new Error('错误 ' + response.status + ': ' + errMsg);
+                }
+
+                if (data.choices && data.choices[0]) {
+                    var expanded = data.choices[0].message.content.trim();
+                    showExpandedInInput(expanded);
+                } else {
+                    throw new Error('API 返回异常');
+                }
+            } catch (error) {
+                var errorText = '❌ 扩写失败: ' + error.message;
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    errorText = '❌ API Key 无效，请重新输入';
+                }
+                showToast(errorText);
+                console.error(errorText);
+            }
+        }
+
+        // ============================================================
+        //  手动同步
+        // ============================================================
+        async function manualSync() {
+            if (!isCloudReady) {
+                showToast('云端未连接，尝试初始化...');
+                await initCloud();
+                if (!isCloudReady) {
+                    showToast('❌ 云端连接失败');
+                    return;
+                }
+            }
+            showToast('🔄 正在同步...');
+            setSyncStatus('syncing');
+            const success = await syncToCloud(sessions);
+            if (success) {
+                renderAll();
+                showToast('✅ 同步完成！');
+            } else {
+                showToast('⚠️ 同步失败');
+            }
+        }
+
+        // ============================================================
+        //  保存设定、固定模块、摘要
+        // ============================================================
+        async function saveSystemPrompt() {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            var prompt = systemPromptInput.value.trim();
+            if (!prompt) { showToast('请输入设定内容'); return; }
+            session.systemPrompt = prompt;
+            session.updateTime = new Date().toISOString();
+            saveSessionsToLocal();
+            renderAll();
+            showToast('✅ 设定已保存');
+        }
+
+        function saveFixedContent() {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            var content = fixedContent.value.trim();
+            session.fixedContent = content;
+            session.updateTime = new Date().toISOString();
+            saveSessionsToLocal();
+            renderAll();
+            showToast('✅ 固定模块已保存');
+        }
+
+        function saveSummaryFromTextarea() {
+            var session = getCurrentSession();
+            if (!session) { showToast('请先创建对话'); return; }
+            var newSummary = summaryTextarea.value.trim();
+            session.summary = newSummary;
+            session.updateTime = new Date().toISOString();
+            saveSessionsToLocal();
+            renderAll();
+            showToast('✅ 动态摘要已保存');
+            isEditingSummary = false;
+            summaryCancelBtn.style.display = 'none';
+        }
+
+        function cancelSummaryEdit() {
+            var session = getCurrentSession();
+            if (session) {
+                summaryTextarea.value = session.summary || '';
+            }
+            isEditingSummary = false;
+            summaryCancelBtn.style.display = 'none';
+            showToast('已取消编辑');
+        }
+
+        // ============================================================
+        //  事件绑定
+        // ============================================================
         modelSelect.addEventListener('change', function() {
             var model = this.value;
             var config = MODEL_CONFIG[model];
@@ -2994,7 +2993,6 @@
         });
 
         savePromptBtn.addEventListener('click', saveSystemPrompt);
-
         fixedSaveBtn.addEventListener('click', saveFixedContent);
 
         fullSummaryBtn.addEventListener('click', function() {
@@ -3031,14 +3029,12 @@
         });
 
         summarySaveBtn.addEventListener('click', saveSummaryFromTextarea);
-
         summaryCancelBtn.addEventListener('click', cancelSummaryEdit);
 
         summaryTextarea.addEventListener('focus', function() {
             isEditingSummary = true;
             summaryCancelBtn.style.display = 'inline-block';
         });
-
         summaryTextarea.addEventListener('blur', function() {
             setTimeout(function() {
                 if (!isEditingSummary) {
@@ -3046,7 +3042,6 @@
                 }
             }, 200);
         });
-
         summaryTextarea.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -3140,7 +3135,6 @@
         });
 
         newSessionBtn.addEventListener('click', addNewSession);
-
         manualSyncBtn.addEventListener('click', manualSync);
 
         document.addEventListener('click', function(e) {
@@ -3155,9 +3149,11 @@
             localStorage.setItem('selected_model', this.value);
         });
 
+        // ============================================================
+        //  初始化
+        // ============================================================
         async function init() {
             await initCloud();
-
             loadSessionsFromLocal();
 
             if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
@@ -3198,7 +3194,7 @@
                 }
             }
 
-            console.log('✅ 初始化完成（文游节拍器 V10 - 同步&新建修复）');
+            console.log('✅ 初始化完成（文游节拍器 V10 - 完整修复版）');
             console.log('📊 压缩阈值: ' + COMPRESS_CONFIG.TRIGGER_COUNT + ' 条消息');
             console.log('⏳ 摘要冷却: ' + (COMPRESS_COOLDOWN / 60000) + ' 分钟');
             console.log('🎵 当前模型: ' + modelSelect.value);
@@ -3206,6 +3202,7 @@
 
         init();
 
+        // 暴露部分函数便于调试
         window.sendMessage = sendMessage;
         window.generateSummary = generateSummary;
         window.forceEnableInput = forceEnableInput;
@@ -3213,6 +3210,7 @@
         window.expandMessage = expandMessage;
         window.manualSync = manualSync;
         window.COMPRESS_CONFIG = COMPRESS_CONFIG;
+        window.createSession = createSession; // 便于调试
     </script>
 </body>
 </html>
