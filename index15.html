@@ -205,9 +205,30 @@ h1 .title-left .version-tag{font-size:9px;color:rgba(255,255,255,0.7);background
 .toast.show{opacity:1;transform:translateX(-50%) scale(1)}
 @supports (padding:max(0px)){body{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right));padding-top:max(8px,env(safe-area-inset-top));padding-bottom:max(8px,env(safe-area-inset-bottom))}}
 @media(max-width:480px){.app-container{padding:4px 6px;border-radius:20px}.header-fixed{padding:4px 6px 2px 6px}h1{padding:4px 8px;min-height:32px;font-size:13px;border-radius:10px}.share-bar button{padding:2px 5px;font-size:9px;min-height:18px}.session-tab{padding:2px 8px;font-size:10px}.control-bar .slider-group input[type=range]{min-width:30px}.message{font-size:13px;padding:6px 10px}.input-section textarea{font-size:13px;min-height:32px;padding:5px 10px}.input-section button{font-size:13px;height:34px;padding:5px 12px}.api-section select{font-size:10px;min-height:24px;padding:2px 6px}.api-section input{font-size:10px;padding:3px 6px;min-height:24px}.api-section button{font-size:10px;padding:3px 8px;min-height:24px}.prompt-section .prompt-row textarea{font-size:11px;min-height:32px}.prompt-section .prompt-row .prompt-actions button{font-size:9px;padding:2px 6px;min-height:16px}.fixed-module textarea{font-size:10px;max-height:70px;min-height:28px}.summary-display textarea{font-size:10px;min-height:40px;max-height:140px}.message-wrapper .msg-actions button{font-size:9px;padding:1px 5px}.input-section{flex-direction:column;gap:4px;padding:6px 4px 4px}.input-section textarea{width:100%;min-height:38px;font-size:14px}.input-section .send-btn-container{width:100%;flex-direction:row;justify-content:flex-end;gap:4px;align-items:center}.input-section .send-btn-container button{height:42px;font-size:15px;padding:6px 16px;flex:1}.input-section .expand-indicator{font-size:10px;padding:3px 8px;white-space:normal;flex:0 1 auto}.header-actions button{font-size:9px;padding:2px 6px;min-height:24px}.control-bar .rename-group input{min-height:26px;font-size:11px}.control-bar .rename-group button{min-height:26px;font-size:10px}.session-tab{font-size:9px;padding:2px 6px}.btn-add-session{font-size:9px;padding:2px 6px}.select-toolbar{bottom:64px;width:calc(100% - 12px);padding:6px 8px;border-radius:10px}.select-toolbar .right button{padding:3px 8px;font-size:9px}.scroll-to-bottom{bottom:6px;right:6px;width:28px;height:28px;font-size:12px}.h1 .title-left .app-name{font-size:13px}.h1 .title-left .version-tag{font-size:8px;padding:0 6px}.ds-icon{width:22px;height:22px}.ds-icon span{font-size:12px}.sync-badge{font-size:7px;padding:0 4px}.btn-theme{width:24px;height:24px;font-size:10px;padding:0}.toggle-collapse-btn{font-size:9px;padding:2px 6px}.btn-sync-manual{font-size:9px;padding:2px 6px}.btn-new{font-size:9px;padding:2px 6px}.status-tip{font-size:8px;padding:1px 0}.status-tip .token-info{font-size:8px}.toast{bottom:80px;padding:4px 14px;font-size:11px}}
+/* 模态框样式（自适应主题） */
+#tokenModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(8px); }
+#tokenModal .modal-box { background:var(--bg-card); padding:24px; border-radius:20px; max-width:400px; width:90%; border:1px solid var(--border); box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+#tokenModal h2 { color:var(--text); margin-bottom:12px; font-size:18px; text-align:center; }
+#tokenModal p { color:var(--text-dim); font-size:13px; margin-bottom:16px; text-align:center; }
+#tokenModal input { width:100%; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--bg-input); color:var(--text); font-size:16px; outline:none; margin-bottom:16px; }
+#tokenModal input:focus { border-color:var(--pink); box-shadow:0 0 0 3px var(--pink-glow); }
+#tokenModal button { width:100%; padding:12px; background:linear-gradient(135deg,var(--pink),var(--pink-dark)); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; }
+#tokenModal button:active { transform:scale(0.97); }
+#tokenModal .hint { color:var(--text-dim); font-size:11px; margin-top:12px; text-align:center; }
 </style>
 </head>
 <body>
+<!-- Token 输入模态框 -->
+<div id="tokenModal">
+    <div class="modal-box">
+        <h2>🔑 输入 GitHub Token</h2>
+        <p>首次使用，请输入你的 GitHub Token<br>（仅保存于浏览器本地，不会上传）</p>
+        <input type="password" id="tokenInput" placeholder="粘贴你的 ghp_ 开头的 Token">
+        <button id="saveTokenBtn">保存并继续</button>
+        <p class="hint">获取 Token：GitHub Settings → Developer settings → Personal access tokens → Tokens (classic) → 勾选 gist</p>
+    </div>
+</div>
+
 <div class="app-container" id="app">
   <div class="header-fixed">
     <h1>
@@ -280,25 +301,42 @@ h1 .title-left .version-tag{font-size:9px;color:rgba(255,255,255,0.7);background
   </div>
   <div class="toast" id="toast"></div>
 </div>
+
 <script>
 // ================================================================
-// 安全版：Token 从浏览器本地存储读取，首次使用时弹窗输入
+// 安全版：Token 从浏览器本地存储读取，若缺失则显示自定义模态框
 const GIST_ID = '6dd732639726866f682d1445f80adfc0';
 const FILE_NAME = 'wenyou_sessions.json';
 
 let GITHUB_TOKEN = localStorage.getItem('github_token');
-if (!GITHUB_TOKEN) {
-    GITHUB_TOKEN = prompt('🔑 首次使用，请输入你的 GitHub Token（只会询问这一次）：\n\n（去 GitHub Settings → Developer settings → Personal access tokens → Tokens (classic) 生成，权限只需勾选 gist）');
-    if (GITHUB_TOKEN) {
-        localStorage.setItem('github_token', GITHUB_TOKEN);
-        alert('✅ Token 已保存到浏览器本地，之后无需再次输入。');
-    } else {
-        alert('⚠️ 未输入 Token，同步功能将不可用！你可以刷新页面重新输入。');
-        GITHUB_TOKEN = '';
-    }
-}
-// ================================================================
 
+// 如果 Token 不存在，显示模态框并等待用户输入
+if (!GITHUB_TOKEN) {
+    document.getElementById('tokenModal').style.display = 'flex';
+    document.getElementById('saveTokenBtn').addEventListener('click', function() {
+        const token = document.getElementById('tokenInput').value.trim();
+        if (token) {
+            localStorage.setItem('github_token', token);
+            GITHUB_TOKEN = token;
+            document.getElementById('tokenModal').style.display = 'none';
+            // 初始化应用
+            initApp();
+        } else {
+            alert('请输入有效的 Token');
+        }
+    });
+    // 按回车键也可以触发保存
+    document.getElementById('tokenInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('saveTokenBtn').click();
+        }
+    });
+} else {
+    // 直接初始化
+    document.addEventListener('DOMContentLoaded', initApp);
+}
+
+// ===== 以下为应用完整逻辑 =====
 const DEFAULT_SYSTEM_PROMPT='你是一个沉浸式文字游戏的主持人。请根据用户提供的设定和对话历史，自然地推动剧情发展。每次回复控制在 500 字以内，不要超过。';
 const MODEL_CONFIG={'deepseek-v4-flash':{url:'https://api.deepseek.com/chat/completions',keyStorage:'deepseek_api_key',defaultKey:localStorage.getItem('deepseek_api_key')||''},'qwen-plus-character':{url:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',keyStorage:'qwen_plus_character_key',defaultKey:localStorage.getItem('qwen_plus_character_key')||''},'qwen-flash-character':{url:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',keyStorage:'qwen_flash_character_key',defaultKey:localStorage.getItem('qwen_flash_character_key')||''},'qwen-plus':{url:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',keyStorage:'qwen_plus_key',defaultKey:localStorage.getItem('qwen_plus_key')||''},'qwen-max':{url:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',keyStorage:'qwen_max_key',defaultKey:localStorage.getItem('qwen_max_key')||''},'qwen3.7-flash':{url:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',keyStorage:'qwen3_7_flash_key',defaultKey:localStorage.getItem('qwen3_7_flash_key')||''}};
 const COMPRESS_CONFIG={TRIGGER_COUNT:40,KEEP_RECENT:16,TRIGGER_INTERVAL:32,SUMMARY_MAX_WORDS:1200,SUMMARY_SEND_MAX:600};
@@ -472,7 +510,8 @@ themeToggle.addEventListener('click',toggleTheme);
 document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='k'){e.preventDefault();sessionSearchInput.classList.add('active');sessionSearchInput.focus();}if(e.key==='Delete'&&selectMode&&selectedIndices.size>0){deleteSelectedMessages();}});
 tokenCount.addEventListener('click',function(){if(confirm('重置 Token 计数？')){totalTokens=0;localStorage.setItem('totalTokens','0');tokenCount.textContent='0';showToast('✅ Token 计数已重置');}});
 
-async function init(){
+// ===== 初始化应用（原 init 逻辑） =====
+async function initApp() {
     loadSessionsFromLocal();
     let cloudData = await loadFromCloud();
     if (cloudData !== null && cloudData.length > 0) {
@@ -525,7 +564,18 @@ async function init(){
     setSyncStatus('synced', '');
     console.log('✅ 初始化完成（文游节拍器 v15.0 · 安全版）');
 }
-init();
+
+// 如果 Token 已存在，直接初始化；否则等待模态框保存后调用 initApp()
+if (GITHUB_TOKEN) {
+    // DOM 可能还未加载，用 DOMContentLoaded 确保
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+        initApp();
+    }
+}
+
+// 暴露全局函数便于调试
 window.sendMessage=sendMessage;window.generateSummary=generateSummary;window.forceEnableInput=forceEnableInput;window.refreshMessage=refreshMessage;window.expandMessage=expandMessage;window.manualSync=manualSync;window.COMPRESS_CONFIG=COMPRESS_CONFIG;window.createSession=createSession;
 </script>
 </body>
